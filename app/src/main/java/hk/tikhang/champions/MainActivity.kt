@@ -34,6 +34,7 @@ import hk.tikhang.champions.ui.SlotEditorScreen
 import hk.tikhang.champions.ui.TeamAnalysisScreen
 import hk.tikhang.champions.ui.SpeedTierScreen
 import hk.tikhang.champions.ui.DamageCalcScreen
+import hk.tikhang.champions.ui.BattleSimScreen
 import hk.tikhang.champions.ui.MatchupScreen
 import hk.tikhang.champions.ui.TeamEditorScreen
 import hk.tikhang.champions.ui.TeamsScreen
@@ -65,6 +66,8 @@ object Routes {
     const val ANALYSIS = "team/{id}/analysis"
     const val SPEED = "speed/{id}"
     const val CALC = "calc/{id}"
+    const val BATTLE = "team/{id}/battle"
+    fun battle(id: Long) = "team/$id/battle"
     fun calc(id: Long) = "calc/$id"
     const val MATCHUP = "team/{id}/matchup"
     fun speed(id: Long) = "speed/$id"
@@ -113,7 +116,10 @@ private fun App(vm: AppViewModel = viewModel()) {
                 pickPokemon = { nav.navigate(Routes.pick(id, it)) }, editSlot = { nav.navigate(Routes.slot(id, it)) },
                 analyse = { nav.navigate(Routes.analysis(id)) },
                 speedTier = { nav.navigate(Routes.speed(id)) }, matchup = { nav.navigate(Routes.matchup(id)) },
-                damage = { nav.navigate(Routes.calc(id)) })
+                damage = { nav.navigate(Routes.calc(id)) }, battle = { nav.navigate(Routes.battle(id)) })
+        }
+        composable(Routes.BATTLE, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+            BattleSimScreen(vm, state, entry.arguments?.getLong("id") ?: 0L, onBack = back)
         }
         composable(Routes.CALC, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
             DamageCalcScreen(vm, state, entry.arguments?.getLong("id") ?: 0L, onBack = back)

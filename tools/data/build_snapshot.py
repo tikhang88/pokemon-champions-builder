@@ -234,6 +234,10 @@ for k in sorted({m for ms in learnsets.values() for m in ms} | patch_moves):
         'flags': sorted(m.get('flags', {}).keys()), 'critRatio': m.get('critRatio', 1),
         'multihit': m.get('multihit'), 'secondary': m.get('secondary'),
         'drain': m.get('drain'), 'recoil': m.get('recoil'),
+        # Effects used by the Battle Simulator (literal data only; scripted effects are not available).
+        **{f: m[f] for f in ('self', 'boosts', 'status', 'volatileStatus', 'sideCondition', 'weather', 'terrain',
+                              'pseudoWeather', 'heal', 'selfSwitch', 'selfdestruct', 'secondaries', 'willCrit',
+                              'ohko', 'stallingMove', 'forceSwitch', 'breaksProtect') if m.get(f) is not None},
         'shortDesc': champ_text(tmoves, k), 'shortDescZh': champ_text(zmoves, k),
         'championsChanged': changed,
         'mainSeriesValues': {f: bmoves[k].get(f) for f in ('basePower', 'accuracy', 'pp', 'type', 'secondary') if f in cmoves.get(k, {})} if changed else None,

@@ -34,9 +34,12 @@ object DamageEngine {
         /** Flash Fire / Protosynthesis / Quark Drive / Unburden etc. currently active. */
         val abilityActive: Boolean = false,
         val types: List<String> = pokemon.types,
+        /** Exact current HP (Battle Simulator); otherwise derived from [curHpPercent]. */
+        val hpExact: Int? = null,
     ) {
         val maxHp: Int get() = stats[Stat.HP] ?: 1
-        val curHp: Int get() = max(1, (maxHp * curHpPercent + 99) / 100).coerceAtMost(maxHp)
+        val curHp: Int get() = hpExact ?: max(1, (maxHp * curHpPercent + 99) / 100).coerceAtMost(maxHp)
+        val atFullHp: Boolean get() = curHp >= maxHp
         fun ab(): String? = ability?.let(::toId)
         fun itemId(): String? = item?.let(::toId)
         fun boost(s: Stat) = (boosts[s] ?: 0).coerceIn(-6, 6)
@@ -227,7 +230,7 @@ object DamageEngine {
             "facade" -> if (attacker.status in setOf(Status.BURN, Status.PARALYSIS, Status.POISON, Status.TOXIC)) bp *= 2
             "hex" -> if (defender.status != Status.NONE) bp *= 2
             "venoshock" -> if (defender.status == Status.POISON || defender.status == Status.TOXIC) bp *= 2
-            "brine" -> if (defender.curHpPercent <= 50) bp *= 2
+            "brine" -> if (defender.curHp * 2 <= defender.maxHp) bp *= 2
             "acrobatics" -> if (attacker.item == null) bp *= 2
             "gyroball" -> {
                 val a = effSpeed(attacker, field); val d = effSpeed(defender, field)
@@ -280,7 +283,7 @@ object DamageEngine {
 
         // Attack and defense stats
         val physical = move.category == "Physical"
-        val crit = field.critical || move.id in ALWAYS_CRIT
+        val crit = field.critical || move.id in ALWAYS_CRIT || move.willCrit == true
         val atkSource = if (move.id == "foulplay") defender else attacker
         val atkStat = when { move.id == "bodypress" -> Stat.DEF; physical -> Stat.ATK; else -> Stat.SPA }
         val defStat = if (physical || move.id in setOf("psyshock", "psystrike", "secretsword")) Stat.DEF else Stat.SPD
@@ -347,7 +350,7 @@ object DamageEngine {
         if (aAb == "neuroforce" && eff > 1) finalMods += 5120
         if (aAb == "sniper" && crit) finalMods += 6144
         if (aAb == "tintedlens" && eff < 1) finalMods += 8192
-        if ((dAb == "multiscale" || dAb == "shadowshield") && defender.curHpPercent >= 100) finalMods += 2048
+        if ((dAb == "multiscale" || dAb == "shadowshield") && defender.atFullHp) finalMods += 2048
         if (dAb == "fluffy" && contact && type != "Fire") finalMods += 2048
         if (dAb == "fluffy" && type == "Fire" && !contact) finalMods += 8192
         if (dAb == "punkrock" && "sound" in move.flags) finalMods += 2048
@@ -400,7 +403,7 @@ object DamageEngine {
 
         if (hits > 1) notes += "${hits} 次攻擊（每次獨立隨機數；總傷害範圍為各次最小／最大之和）"
         if (parentalBond) notes += "親子愛：第二擊傷害為 25%"
-        if (crit && move.id in ALWAYS_CRIT) notes += "此招式必定擊中要害"
+        if (crit && (move.id in ALWAYS_CRIT || move.willCrit == true)) notes += "此招式必定擊中要害"
         if (weather != field.weather) notes += "Mega Sol：此 Pokémon 的招式視為在大晴天下使用"
         if (move.basePower == 0 || move.id in HANDLED_SPECIAL) notes += "威力按特殊規則計算：$bp"
         if (aAb == "protosynthesis" || aAb == "quarkdrive" || dAb == "protosynthesis" || dAb == "quarkdrive") verification = Verification.COMMUNITY

@@ -9,7 +9,6 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
-import androidx.test.espresso.Espresso.pressBack
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
@@ -46,7 +45,7 @@ class SmokeTest {
         waitFor("建立新隊伍")
         rule.onNodeWithText("建立新隊伍").performClick()
         waitFor("合法性")
-        pressBack()
+        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
         waitFor("隊伍 1")
     }
 

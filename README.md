@@ -2,9 +2,19 @@
 
 個人用 Android App，用於 Pokémon Champions 的競技資料查閱、隊伍構築及分析。完全離線可用。
 
-目前版本：**V1.0（Phase 1：Data Foundation ＋ 資料匯入）**
+目前版本：**V1.1（Phase 2：Team Builder ＋ M-D 暫定資料）**
 
-## 功能（V1.0）
+## 功能
+
+### V1.1 新增
+- **Team Builder**：建立、儲存、重新命名、複製、刪除隊伍；6 個隊員位置；選擇 Regulation 及單打／雙打。
+- **隊員設定**：特性、道具、性格（顯示↑↓）、Stat Points（66／32，即時顯示 Lv50 能力值）、4 個招式（只列 Champions 招式表內的招式）。
+- **Mega Toggle**：選擇 Mega 形態會自動裝備 Mega Stone，並同步更新屬性、特性及能力值。
+- **合法性檢查**：合法／不合法／待驗證／未完成，逐項列出原因（Regulation、Species Clause、Item Clause、Mega Stone、招式、特性、SP、隊伍人數；多於一隻 Mega 會提示）。
+- **匯出隊伍文字**：分享到其他 App。
+- **M-D 暫定資料**：M-C 全部 ＋ 官方已公布的 Heatran、Dondozo、Tatsugiri（含 Mega Heatran、三款 Mega Tatsugiri），以及官方公布的 Mega 特性；12 月 2 日平衡調整會在招式及特性頁顯示為「即將生效」。
+
+### V1.0
 
 - **Pokémon 圖鑑**：自動套用所選 Regulation；搜尋（中／英名稱、編號、特性），按屬性篩選，按編號、名稱、種族值、各項能力排序，可選擇包括或只看 Mega。
 - **Pokémon 詳細頁**：概覽、能力值（Lv50 範圍）、招式（Champions 招式表）、特性、形態。
@@ -20,7 +30,7 @@
 
 ## 12 月 2 日匯入 M-D 資料
 
-`Update data` workflow 每天 11:00（香港時間）會自動執行：
+`Update data` workflow 每天 **03:00（香港時間）** 會自動執行：
 
 1. 由 Pokémon Showdown 重新產生資料。
 2. 如果 Champions 資料有改變（例如加入 M-D 名單）：
@@ -61,8 +71,8 @@ data/          最新資料快照
 |---|---|---|
 | 0 | 研究及可行性 | ✅ |
 | 1 | Data Foundation、資料匯入 | ✅ V1.0 |
-| 2 | Team Builder、合法性檢查 | 下一步 |
-| 3 | Team Analysis | |
+| 2 | Team Builder、合法性檢查 | ✅ V1.1 |
+| 3 | Team Analysis | 下一步 |
 | 4 | Coverage Matrix、Speed Tier、Matchup | |
 | 5 | Damage Calculator | |
 | 6 | Battle Simulator | |

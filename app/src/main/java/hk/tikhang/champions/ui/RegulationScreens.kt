@@ -120,14 +120,33 @@ fun RegulationDetailScreen(vm: AppViewModel, state: DataState, id: String, onBac
                         a.newPokemonCount?.let { LabelValue("新增 Pokémon", "$it 隻") }
                         a.newMegaCount?.let { LabelValue("新增 Mega", "$it 個") }
                         if (a.namedSoFar.isNotEmpty()) LabelValue("已公布名稱", a.namedSoFar.joinToString("、"))
+                        a.unannounced?.let { LabelValue("未公布", it) }
                         a.balanceAdjustments?.let { LabelValue("平衡調整", it) }
+                        if (r.provisional) Text("暫定名單 = 上一個 Regulation ＋ 已公布的 Pokémon。新 Pokémon 的招式表暫用 Scarlet/Violet 資料，待驗證。", style = MaterialTheme.typography.bodySmall)
                         Text("完整名單會在資料來源更新後，經「資料更新」匯入。", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+            s.balancePatches.filter { it.effectiveDate == r.effectiveDate }.forEach { patch ->
+                item {
+                    SectionCard("平衡調整（${localTime(patch.effectiveDate)} 起，${patch.appliesTo ?: ""}）") {
+                        VerificationBadge(patch.verification)
+                        Text("招式調整", style = MaterialTheme.typography.labelLarge)
+                        patch.moveChanges.forEach { c -> Text("・${s.moveById[c.move]?.let { it.nameZh ?: it.name } ?: c.move}：${c.text}", style = MaterialTheme.typography.bodySmall) }
+                        Text("新增可學招式", style = MaterialTheme.typography.labelLarge)
+                        patch.newMoves.forEach { nm ->
+                            val who = nm.pokemon.joinToString("、") { id -> s.pokemonById[id]?.let { s.displayName(it) } ?: id }
+                            Text("・${s.moveById[nm.move]?.let { it.nameZh ?: it.name } ?: nm.move}：$who", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text("特性調整", style = MaterialTheme.typography.labelLarge)
+                        patch.abilityChanges.forEach { c -> Text("・${s.ability(c.ability)?.nameZh ?: c.ability}：${c.text}", style = MaterialTheme.typography.bodySmall) }
+                        Text("來源：${patch.source}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             r.newVsPrevious?.takeIf { it.isNotEmpty() }?.let { ids ->
                 item {
-                    SectionCard("相比上一個 Regulation 新增（${ids.size}）") {
+                    SectionCard("相比上一個 Regulation 新增（${ids.size}）" + if (r.provisional) "・暫定" else "") {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             ids.mapNotNull { s.pokemonById[it] }.forEach { p ->
                                 AssistChip(onClick = { openPokemon(p.id) }, label = { Text(s.displayName(p)) })

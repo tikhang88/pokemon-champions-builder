@@ -112,7 +112,7 @@ data class ChangeLog(
                 val o = old.regulationById[r.id]
                 when {
                     o == null -> regs += "新 Regulation：${r.id}"
-                    !o.hasPokemonList && r.hasPokemonList -> regs += "${r.id}：已取得 Pokémon 名單（${r.allowedPokemon!!.size} 個）"
+                    !o.hasConfirmedList && r.hasConfirmedList -> regs += "${r.id}：已取得 Pokémon 名單（${r.allowedPokemon!!.size} 個）"
                     else -> {
                         val add = r.allowedPokemon.orEmpty() - o.allowedPokemon.orEmpty().toSet()
                         val rem = o.allowedPokemon.orEmpty() - r.allowedPokemon.orEmpty().toSet()

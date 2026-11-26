@@ -66,7 +66,10 @@ fun DataUpdateScreen(vm: AppViewModel, state: DataState, onBack: () -> Unit) {
             state.needsUpdateFor?.let { r ->
                 item {
                     SectionCard {
-                        Text("${r.id} 已經生效，但目前資料沒有 ${r.id} 的 Pokémon 名單。", color = MaterialTheme.colorScheme.error)
+                        Text(
+                            if (r.provisional) "${r.id} 已經生效，但名單只包括官方已公布的 Pokémon（暫定）。" else "${r.id} 已經生效，但目前資料沒有 ${r.id} 的 Pokémon 名單。",
+                            color = MaterialTheme.colorScheme.error,
+                        )
                         Text("請按下方步驟取得新資料。期間 App 會繼續使用 ${state.regulation.id}。", style = MaterialTheme.typography.bodySmall)
                     }
                 }
@@ -84,7 +87,7 @@ fun DataUpdateScreen(vm: AppViewModel, state: DataState, onBack: () -> Unit) {
             item {
                 SectionCard("如何取得新資料（例如 12 月 2 日的 M-D）") {
                     Text(
-                        "1. GitHub 每天會自動檢查資料來源；有更新時會在 Releases 發佈新資料檔。\n" +
+                        "1. GitHub 每天 03:00 會自動檢查資料來源；有更新時會在 Releases 發佈新資料檔。\n" +
                             "2. 用手機打開 $RELEASES_URL，找標題為「資料更新」的最新版本。\n" +
                             "3. 下載 champions_data.json。\n" +
                             "4. 回到這裏按「選擇資料檔並匯入」，選剛下載的檔案。\n" +

@@ -89,19 +89,22 @@ fun HomeScreen(vm: AppViewModel, state: DataState, navigate: (String) -> Unit) {
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                     ) {
                         Column(Modifier.padding(16.dp)) {
-                            Text("${r.id} 已生效，但目前資料未有 ${r.id} 名單", style = MaterialTheme.typography.titleSmall)
-                            Text("暫時使用 ${state.regulation.id}。點此匯入新資料。", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                if (r.provisional) "${r.id} 已生效，但名單只包括已公布的 Pokémon" else "${r.id} 已生效，但目前資料未有 ${r.id} 名單",
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text("現正使用 ${state.regulation.id}。點此匯入新資料。", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
             }
+            item { MenuItem("Team Builder", "建立及保存隊伍、Mega Toggle、Stat Points、招式、合法性檢查") { navigate(Routes.TEAMS) } }
             item { MenuItem("Pokémon 圖鑑", "搜尋、篩選、能力值、招式、Mega 比較") { navigate(Routes.POKEDEX) } }
             item { MenuItem("Regulation", "目前及歷史規則、可用 Pokémon、切換 Regulation") { navigate(Routes.REGULATIONS) } }
             item { MenuItem("資料更新", "匯入新資料（例如 12 月 2 日的 M-D）、還原、更新紀錄") { navigate(Routes.DATA) } }
             item {
                 SectionCard("之後的版本") {
                     listOf(
-                        "Team Builder・隊伍合法性檢查" to "Phase 2",
                         "Team Analysis・Coverage Matrix" to "Phase 3",
                         "Speed Tier・Matchup Research" to "Phase 4",
                         "Damage Calculator" to "Phase 5",

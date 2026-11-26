@@ -87,8 +87,24 @@ object RegulationEngine {
             ?: s.regulationById.getValue(s.meta.currentRegulation)
     }
 
-    /** True when a Regulation has started but this snapshot has no Pokémon list for it. */
-    fun needsDataUpdate(s: Snapshot, now: Instant): Regulation? = inEffect(s, now)?.takeIf { !it.hasPokemonList }
+    /** The Regulation in effect when this snapshot has no confirmed (non-provisional) list for it. */
+    fun needsDataUpdate(s: Snapshot, now: Instant): Regulation? = inEffect(s, now)?.takeIf { !it.hasConfirmedList }
+
+    // ---- Announced balance patches that are not yet in the data -----------------------
+
+    fun upcomingPatches(s: Snapshot, now: Instant): List<BalancePatch> =
+        s.balancePatches.filter { p -> parseInstant(p.effectiveDate)?.isAfter(now) == true }
+
+    /** e.g. "12月2日起：命中 90% → 95%…" for a move, or null. */
+    fun upcomingMoveChanges(s: Snapshot, moveId: String, now: Instant): List<Pair<BalancePatch, PatchMoveChange>> =
+        upcomingPatches(s, now).flatMap { p -> p.moveChanges.filter { it.move == moveId }.map { p to it } }
+
+    /** Moves a Pokémon gains in an upcoming patch (by base species id or forme id). */
+    fun upcomingNewMoves(s: Snapshot, pokemonId: String, now: Instant): List<Pair<BalancePatch, String>> =
+        upcomingPatches(s, now).flatMap { p -> p.newMoves.filter { pokemonId in it.pokemon }.map { p to it.move } }
+
+    fun upcomingAbilityChanges(s: Snapshot, abilityId: String, now: Instant): List<Pair<BalancePatch, PatchAbilityChange>> =
+        upcomingPatches(s, now).flatMap { p -> p.abilityChanges.filter { it.ability == abilityId }.map { p to it } }
 
     fun parseInstant(s: String): Instant? = runCatching { Instant.parse(s) }.getOrNull()
 }

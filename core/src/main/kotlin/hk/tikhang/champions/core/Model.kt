@@ -29,6 +29,7 @@ data class Snapshot(
     val items: List<Item>,
     val learnsets: Map<String, List<String>>,
     val mechanics: JsonElement? = null,
+    val balancePatches: List<BalancePatch> = emptyList(),
 ) {
     // Lookup tables, built once per snapshot.
     @kotlinx.serialization.Transient val pokemonById: Map<String, Pokemon> = pokemon.associateBy { it.id }
@@ -39,6 +40,22 @@ data class Snapshot(
 
     /** Mega forms of a base species id, e.g. "charizard" → [Charizard-Mega-X, Charizard-Mega-Y]. */
     fun megasOf(baseId: String): List<Pokemon> = pokemon.filter { it.isMega && it.megaOf == baseId }
+
+    /**
+     * Mega forms available to one out-of-battle form. Handles species whose formes have their own
+     * Megas: Tatsugiri (Curly/Droopy/Stretchy) and Meowstic (♂/♀).
+     */
+    fun megaOptions(p: Pokemon): List<Pokemon> {
+        val candidates = megasOf(p.baseId)
+        val siblingFormes = pokemon.filter { it.baseId == p.baseId && !it.isMega && it.forme != null }.mapNotNull { it.forme }.toSet()
+        // e.g. Mega Floette belongs to Eternal Floette because plain Floette isn't in the data.
+        val plainBaseMissing = pokemonById[p.baseId]?.teamSelectable != true
+        return candidates.filter { m ->
+            val prefix = (m.forme ?: "").substringBefore("Mega").trimEnd('-')
+            if (p.forme != null) prefix == p.forme || (prefix.isEmpty() && plainBaseMissing)
+            else prefix.isEmpty() || prefix !in siblingFormes
+        }
+    }
 
     fun ability(name: String): Ability? = abilityById[toId(name)]
 
@@ -107,8 +124,12 @@ data class Regulation(
     val verification: String = Verification.PENDING,
     val source: String = "",
     val isCurrent: Boolean = false,
+    /** True when the list is built from announced names only (Showdown has no data yet). */
+    val provisional: Boolean = false,
 ) {
     val hasPokemonList: Boolean get() = !allowedPokemon.isNullOrEmpty()
+    /** A list that is confirmed by the data source, not just announced. */
+    val hasConfirmedList: Boolean get() = hasPokemonList && !provisional
 }
 
 @Serializable
@@ -126,7 +147,30 @@ data class Announced(
     val newMegaCount: Int? = null,
     val namedSoFar: List<String> = emptyList(),
     val balanceAdjustments: String? = null,
+    val unannounced: String? = null,
 )
+
+/** Officially announced battle balance changes that take effect at [effectiveDate]. */
+@Serializable
+data class BalancePatch(
+    val id: String,
+    val effectiveDate: String,
+    val appliesTo: String? = null,
+    val source: String = "",
+    val verification: String = Verification.OFFICIAL,
+    val moveChanges: List<PatchMoveChange> = emptyList(),
+    val newMoves: List<PatchNewMove> = emptyList(),
+    val abilityChanges: List<PatchAbilityChange> = emptyList(),
+)
+
+@Serializable
+data class PatchMoveChange(val move: String, val text: String, val accuracy: Int? = null)
+
+@Serializable
+data class PatchNewMove(val move: String, val pokemon: List<String>)
+
+@Serializable
+data class PatchAbilityChange(val ability: String, val text: String)
 
 @Serializable
 data class Stats(val hp: Int, val atk: Int, val def: Int, val spa: Int, val spd: Int, val spe: Int) {
@@ -163,8 +207,12 @@ data class Pokemon(
     val otherFormes: List<String> = emptyList(),
     val legalIn: List<String> = emptyList(),
     val learnsetFrom: String? = null,
+    /** "MAIN_SERIES_SV" when the move list is a placeholder from Scarlet/Violet. */
+    val learnsetSource: String? = null,
+    val abilityNote: String? = null,
     val verification: String = Verification.COMMUNITY,
 ) {
+    val hasPlaceholderLearnset: Boolean get() = learnsetSource == "MAIN_SERIES_SV"
     val baseId: String get() = toId(baseSpecies)
 }
 

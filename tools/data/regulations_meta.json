@@ -2,32 +2,199 @@
   "_comment": "Dates and announcement notes for each Regulation. Legal Pokémon lists come from Showdown automatically; edit this file only to add dates/notes for a new Regulation.",
   "regulations": [
     {
-      "id": "M-A", "name": "Regulation Set M-A",
-      "effectiveDate": "2026-04-08T02:00:00Z", "endDate": "2026-06-17T01:59:00Z",
+      "id": "M-A",
+      "name": "Regulation Set M-A",
+      "effectiveDate": "2026-04-08T02:00:00Z",
+      "endDate": "2026-06-17T01:59:00Z",
       "source": "Serebii / Bulbapedia (dates)",
       "note": "Showdown no longer keeps an M-A mod; legal list not available."
     },
     {
-      "id": "M-B", "name": "Regulation Set M-B",
-      "effectiveDate": "2026-06-17T02:00:00Z", "endDate": "2026-09-09T01:59:00Z",
+      "id": "M-B",
+      "name": "Regulation Set M-B",
+      "effectiveDate": "2026-06-17T02:00:00Z",
+      "endDate": "2026-09-09T01:59:00Z",
       "source": "Bulbapedia / pokemon-zone (dates)"
     },
     {
-      "id": "M-C", "name": "Regulation Set M-C",
-      "effectiveDate": "2026-09-09T02:00:00Z", "endDate": "2026-12-02T01:59:00Z",
+      "id": "M-C",
+      "name": "Regulation Set M-C",
+      "effectiveDate": "2026-09-09T02:00:00Z",
+      "endDate": "2026-12-02T01:59:00Z",
       "source": "pokemon-zone (dates)"
     },
     {
-      "id": "M-D", "name": "Regulation Set M-D",
-      "effectiveDate": "2026-12-02T02:00:00Z", "endDate": "2027-03-03T01:59:00Z",
-      "source": "Official announcement 2026-11-24 (PocketMonsters.net, Nintendo Life)",
+      "id": "M-D",
+      "name": "Regulation Set M-D",
+      "effectiveDate": "2026-12-02T02:00:00Z",
+      "endDate": "2027-03-03T01:59:00Z",
+      "source": "Official announcement 2026-11-25 (Pokémon official site / X, via PocketMonsters.net, Serebii, Dengeki Online)",
       "announced": {
-        "carriesOverFrom": "M-C (no Pokémon removed)",
+        "carriesOverFrom": "M-A 至 M-C 全部 Pokémon 保留",
         "newPokemonCount": 24,
         "newMegaCount": 4,
-        "namedSoFar": ["Heatran", "Mega Heatran", "Dondozo", "Tatsugiri", "Mega Tatsugiri"],
-        "balanceAdjustments": "Announced for 2026-12-02"
+        "namedSoFar": [
+          "Heatran",
+          "Dondozo",
+          "Tatsugiri",
+          "Mega Heatran",
+          "Mega Tatsugiri"
+        ],
+        "unannounced": "其餘 21 隻 Pokémon 及 2 個 Mega 未公布",
+        "balanceAdjustments": "2026-12-02 維護後生效，適用於所有 Regulation"
+      },
+      "provisional": {
+        "_comment": "Used only until Showdown has an M-D mod. Add more Showdown IDs to 'add' as they are announced.",
+        "basedOn": "M-C",
+        "add": [
+          "heatran",
+          "heatranmega",
+          "dondozo",
+          "tatsugiri",
+          "tatsugiridroopy",
+          "tatsugiristretchy",
+          "tatsugiricurlymega",
+          "tatsugiridroopymega",
+          "tatsugiristretchymega"
+        ],
+        "abilityOverrides": {
+          "heatranmega": [
+            "Water Compaction"
+          ],
+          "tatsugiricurlymega": [
+            "Tokujou"
+          ],
+          "tatsugiridroopymega": [
+            "Tokujou"
+          ],
+          "tatsugiristretchymega": [
+            "Tokujou"
+          ]
+        },
+        "customAbilities": [
+          {
+            "id": "tokujou",
+            "name": "Tokujou",
+            "nameZh": "とくじょう（中英文名稱未公布）",
+            "shortDesc": "On switch-in, raises the user's Sp. Atk by 1 stage. (Official, Japanese name only)",
+            "shortDescZh": "每次出場時，特攻提升 1 級。",
+            "verification": "OFFICIAL",
+            "source": "Official Pokémon Champions X account, 2026-11-25"
+          }
+        ]
       }
+    }
+  ],
+  "balancePatches": [
+    {
+      "id": "2026-12-02",
+      "effectiveDate": "2026-12-02T02:00:00Z",
+      "appliesTo": "All regulations",
+      "source": "Official notice 2026-11-18 (Pokémon official site, via Nintendo Life / Game Rant)",
+      "verification": "OFFICIAL",
+      "moveChanges": [
+        {
+          "move": "screech",
+          "text": "命中 85% → 100%",
+          "accuracy": 100
+        },
+        {
+          "move": "rockslide",
+          "text": "命中 90% → 95%，畏縮機會 30% → 20%",
+          "accuracy": 95
+        },
+        {
+          "move": "steelwing",
+          "text": "命中 90% → 100%",
+          "accuracy": 100
+        },
+        {
+          "move": "metalsound",
+          "text": "命中 85% → 100%",
+          "accuracy": 100
+        },
+        {
+          "move": "frostbreath",
+          "text": "命中 90% → 100%",
+          "accuracy": 100
+        }
+      ],
+      "newMoves": [
+        {
+          "move": "psychup",
+          "pokemon": [
+            "alakazam",
+            "starmie",
+            "mrmime",
+            "mawile",
+            "altaria",
+            "castform",
+            "absol",
+            "roserade",
+            "weavile",
+            "rotom",
+            "rotomheat",
+            "rotomwash",
+            "rotomfrost",
+            "rotomfan",
+            "rotommow",
+            "liepard",
+            "musharna",
+            "audino",
+            "cofagrigus",
+            "slurpuff",
+            "drampa",
+            "annihilape"
+          ]
+        },
+        {
+          "move": "slackoff",
+          "pokemon": [
+            "emboar"
+          ]
+        },
+        {
+          "move": "roost",
+          "pokemon": [
+            "beedrill",
+            "hydreigon"
+          ]
+        },
+        {
+          "move": "tailwind",
+          "pokemon": [
+            "emolga"
+          ]
+        },
+        {
+          "move": "wonderroom",
+          "pokemon": [
+            "umbreon"
+          ]
+        },
+        {
+          "move": "playrough",
+          "pokemon": [
+            "vaporeon",
+            "jolteon",
+            "flareon",
+            "espeon",
+            "umbreon",
+            "leafeon",
+            "glaceon"
+          ]
+        }
+      ],
+      "abilityChanges": [
+        {
+          "ability": "flashfire",
+          "text": "發動後獲得「火焰增強」狀態，Mega Evolution 後仍然保留。"
+        },
+        {
+          "ability": "stalwart",
+          "text": "原有效果不變（無視吸引招式的特性及招式），另外使用招式時會無視目標的替身。"
+        }
+      ]
     }
   ]
 }

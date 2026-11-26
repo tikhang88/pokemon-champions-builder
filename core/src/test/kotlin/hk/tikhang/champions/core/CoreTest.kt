@@ -104,11 +104,29 @@ class RegulationEngineTest {
         assertNull(RegulationEngine.needsDataUpdate(snap, nov))
     }
 
-    @Test fun afterMdStartsWithoutData() {
+    @Test fun afterMdStartsWithProvisionalList() {
         val dec = Instant.parse("2026-12-03T00:00:00Z")
-        // M-D is in effect but this snapshot has no list for it: keep using M-C and ask for an update.
-        assertEquals("M-C", RegulationEngine.defaultRegulation(snap, dec).id)
+        // M-D has only a provisional list (M-C + officially named Pokémon): use it, but ask for an update.
+        assertEquals("M-D", RegulationEngine.defaultRegulation(snap, dec).id)
         assertEquals("M-D", RegulationEngine.needsDataUpdate(snap, dec)?.id)
+    }
+
+    @Test fun provisionalMd() {
+        val md = snap.regulationById.getValue("M-D")
+        assertTrue(md.provisional)
+        assertEquals(Verification.PENDING, md.verification)
+        assertTrue(snap.regulationById.getValue("M-C").allowedPokemon!!.all { it in md.allowedPokemon!! })
+        assertTrue("heatranmega" in md.allowedPokemon!!)
+        assertEquals(listOf("Water Compaction"), snap.pokemonById.getValue("heatranmega").abilities)
+        assertTrue(snap.pokemonById.getValue("heatran").hasPlaceholderLearnset)
+        assertEquals(Verification.PENDING, snap.pokemonById.getValue("dondozo").verification)
+    }
+
+    @Test fun balancePatchIsUpcomingUntilDec2() {
+        val nov = Instant.parse("2026-11-26T01:00:00Z")
+        assertEquals("命中 90% → 95%，畏縮機會 30% → 20%", RegulationEngine.upcomingMoveChanges(snap, "rockslide", nov).single().second.text)
+        assertTrue(RegulationEngine.upcomingNewMoves(snap, "umbreon", nov).map { it.second }.containsAll(listOf("wonderroom", "playrough")))
+        assertTrue(RegulationEngine.upcomingPatches(snap, Instant.parse("2026-12-02T03:00:00Z")).isEmpty())
     }
 }
 
@@ -125,7 +143,7 @@ class ImportTest {
         // Simulate an M-D snapshot: M-D gains a list with one extra Pokémon (Heatran stand-in = an existing id).
         val md = snap.regulationById.getValue("M-D").copy(
             allowedPokemon = snap.regulationById.getValue("M-C").allowedPokemon,
-            verification = Verification.COMMUNITY, version = 1,
+            verification = Verification.COMMUNITY, version = 1, provisional = false,
         )
         val newSnap = snap.copy(
             meta = snap.meta.copy(dataVersion = "test-md"),

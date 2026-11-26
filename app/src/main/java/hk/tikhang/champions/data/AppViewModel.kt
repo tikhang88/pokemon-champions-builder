@@ -15,7 +15,11 @@ import hk.tikhang.champions.core.RegulationEngine
 import hk.tikhang.champions.core.Snapshot
 import hk.tikhang.champions.core.TypeEngine
 import kotlinx.coroutines.Dispatchers
+import hk.tikhang.champions.core.BattleFormat
+import hk.tikhang.champions.core.Team
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -55,6 +59,41 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _startupWarning = MutableStateFlow<String?>(null)
     val startupWarning: StateFlow<String?> = _startupWarning.asStateFlow()
+
+    // ---- Teams (Phase 2) ---------------------------------------------------------------
+    private val teamDao = AppDatabase.get(app).teams()
+    val teams: StateFlow<List<TeamEntity>> = teamDao.all().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun createTeam(onCreated: (Long) -> Unit) {
+        val reg = _data.value?.regulation?.id ?: return
+        viewModelScope.launch {
+            val n = teams.value.size + 1
+            val team = Team(name = "隊伍 $n", regulationId = reg, format = BattleFormat.DOUBLES)
+            val now = System.currentTimeMillis()
+            val id = withContext(Dispatchers.IO) { teamDao.insert(TeamEntity(name = team.name, json = team.toJson(), createdAt = now, updatedAt = now)) }
+            onCreated(id)
+        }
+    }
+
+    fun saveTeam(id: Long, team: Team) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val old = teamDao.get(id) ?: return@launch
+            teamDao.update(old.copy(name = team.name, json = team.toJson(), updatedAt = System.currentTimeMillis()))
+        }
+    }
+
+    fun duplicateTeam(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val old = teamDao.get(id) ?: return@launch
+            val team = old.team()?.let { it.copy(name = it.name + "（複製）") } ?: return@launch
+            val now = System.currentTimeMillis()
+            teamDao.insert(TeamEntity(name = team.name, json = team.toJson(), createdAt = now, updatedAt = now))
+        }
+    }
+
+    fun deleteTeam(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) { teamDao.delete(id) }
+    }
 
     val hasPrevious: Boolean get() = store.hasPrevious
     val hasImported: Boolean get() = store.hasImported

@@ -54,6 +54,7 @@ cmoves = load_ts('data/mods/champions/moves.ts') or {}
 citems = load_ts('data/mods/champions/items.ts') or {}
 cabil = load_ts('data/mods/champions/abilities.ts') or {}
 clearn = load_ts('data/mods/champions/learnsets.ts')
+blearn = load_ts('data/learnsets.ts')  # main-series learnsets: only for provisional (not yet in Champions) Pokémon
 tmoves, tabil, titems = load_ts('data/text/moves.ts'), load_ts('data/text/abilities.ts'), load_ts('data/text/items.ts')
 zdex = load_ts('data/text/zh-tw/pokedex.ts') or {}
 zmoves = load_ts('data/text/zh-tw/moves.ts') or {}
@@ -79,7 +80,8 @@ for reg, mod in reg_mods.items():
         reg_fd[reg] = fd
 print('Regulations in Showdown:', {r: reg_mods[r] for r in sorted(reg_fd)})
 
-META_REGS = json.load(open(os.path.join(HERE, 'regulations_meta.json')))['regulations']
+META = json.load(open(os.path.join(HERE, 'regulations_meta.json')))
+META_REGS = META['regulations']
 
 
 def eff(base, mod):
@@ -134,9 +136,26 @@ def legal_ids(fd):
 
 legal = {r: legal_ids(fd) for r, fd in reg_fd.items()}
 
+# Provisional lists: an announced Regulation that Showdown doesn't have yet = the Regulation it
+# builds on + the officially named additions (regulations_meta.json "provisional").
+provisional, provisional_adds, ability_overrides, custom_abilities = {}, set(), {}, []
+for m in META_REGS:
+    pv = m.get('provisional')
+    if not pv or m['id'] in legal or pv.get('basedOn') not in legal:
+        continue
+    adds = [k for k in pv.get('add', []) if k in dex]
+    missing = [k for k in pv.get('add', []) if k not in dex]
+    if missing:
+        print('WARNING: provisional IDs not in Showdown pokedex:', missing)
+    provisional[m['id']] = legal[pv['basedOn']] + [k for k in adds if k not in legal[pv['basedOn']]]
+    provisional_adds.update(k for k in adds if not any(k in l for l in legal.values()))
+    ability_overrides.update(pv.get('abilityOverrides', {}))
+    custom_abilities += pv.get('customAbilities', [])
+all_legal = {**legal, **provisional}
+
 # ---- Pokémon --------------------------------------------------------------------------
-all_ids = sorted({k for lst in legal.values() for k in lst}, key=lambda k: (dex[k]['num'], k))
-reg_order = sorted(legal)
+all_ids = sorted({k for lst in all_legal.values() for k in lst}, key=lambda k: (dex[k]['num'], k))
+reg_order = sorted(all_legal)
 pokemon = []
 for k in all_ids:
     s = dex[k]
@@ -146,16 +165,18 @@ for k in all_ids:
         'id': k, 'name': s['name'], 'nameZh': zh(zdex, k) or zh(zdex, base_id),
         'num': s['num'], 'types': s['types'], 'baseStats': s['baseStats'],
         'bst': sum(s['baseStats'].values()),
-        'abilities': list(s['abilities'].values()),
+        'abilities': ability_overrides.get(k) if k in provisional_adds and k in ability_overrides else list(s['abilities'].values()),
         'forme': s.get('forme'), 'baseSpecies': s.get('baseSpecies', s['name']),
         'isMega': mega, 'megaStone': s.get('requiredItem') if mega else None,
         'megaOf': base_id if mega else None,
         'battleOnly': bool(s.get('battleOnly')), 'teamSelectable': team_selectable(k),
         'heightM': s.get('heightm'), 'weightKg': s.get('weightkg'),
         'gender': s.get('gender'), 'otherFormes': s.get('otherFormes', []),
-        'legalIn': [r for r in reg_order if k in legal[r]],
-        'source': 'showdown', 'verification': COMMUNITY,
+        'legalIn': [r for r in reg_order if k in all_legal[r]],
+        'source': 'showdown', 'verification': PENDING if k in provisional_adds else COMMUNITY,
     })
+    if k in provisional_adds and k in ability_overrides:
+        pokemon[-1]['abilityNote'] = 'Official Mega ability from the announcement; Showdown has no Champions data yet.'
 
 # ---- Learnsets ------------------------------------------------------------------------
 LEARNSET_ALIASES = {'floettemega': 'floetteeternal'}  # Mega Floette comes from Eternal Floette
@@ -169,9 +190,23 @@ def learnset_for(k):
     return None, []
 
 
+def main_series_learnset(k):
+    """Scarlet/Violet (gen 9) learnset, used only for provisional Pokémon and always labelled."""
+    s = dex[k]
+    for cand in (k, to_id(s.get('baseSpecies'))):
+        ls = blearn.get(cand, {}).get('learnset')
+        if ls:
+            return cand, sorted(m for m, src in ls.items() if any(x.startswith('9') for x in src))
+    return None, []
+
+
 learnsets, missing_learnsets = {}, []
 for p in pokemon:
     src, mv = learnset_for(p['id'])
+    if not mv and p['id'] in provisional_adds:
+        src, mv = main_series_learnset(p['id'])
+        if mv:
+            p['learnsetSource'] = 'MAIN_SERIES_SV'
     if mv:
         learnsets[p['id']] = mv
         if src != p['id']:
@@ -182,7 +217,8 @@ for p in pokemon:
 # ---- Moves ----------------------------------------------------------------------------
 CHANGE_FIELDS = ('basePower', 'accuracy', 'pp', 'priority', 'type', 'category', 'target', 'secondary', 'secondaries')
 moves = []
-for k in sorted({m for ms in learnsets.values() for m in ms}):
+patch_moves = {c['move'] for bp in META.get('balancePatches', []) for key in ('moveChanges', 'newMoves') for c in bp.get(key, [])}
+for k in sorted({m for ms in learnsets.values() for m in ms} | patch_moves):
     if k not in bmoves:
         continue
     m = eff(bmoves[k], cmoves.get(k))
@@ -209,7 +245,10 @@ for p in learnsets:
 
 # ---- Abilities / Items ----------------------------------------------------------------
 abilities = []
-for k in sorted({to_id(a) for p in pokemon for a in p['abilities']}):
+custom_ids = {c['id'] for c in custom_abilities}
+for c in custom_abilities:
+    abilities.append({'championsChanged': True, **c})
+for k in sorted({to_id(a) for p in pokemon for a in p['abilities']} - custom_ids):
     a = eff(babil.get(k, {'name': k}), cabil.get(k))
     abilities.append({
         'id': k, 'name': a.get('name', k), 'nameZh': zh(zabil, k),
@@ -218,16 +257,18 @@ for k in sorted({to_id(a) for p in pokemon for a in p['abilities']}):
     })
 
 items = []
+provisional_stones = {to_id(dex[k].get('requiredItem')) for k in provisional_adds if is_mega(dex[k])}
 for k, b in bitems.items():
     it = eff(b, citems.get(k))
-    if it.get('isNonstandard'):
+    pending_item = k in provisional_stones
+    if it.get('isNonstandard') and not pending_item:
         continue
     stone = it.get('megaStone')
     items.append({
         'id': k, 'name': it['name'], 'nameZh': zh(zitems, k),
         'megaStone': stone, 'isMegaStone': bool(stone),
         'shortDesc': champ_text(titems, k), 'shortDescZh': champ_text(zitems, k),
-        'source': 'showdown', 'verification': COMMUNITY,
+        'source': 'showdown', 'verification': PENDING if pending_item else COMMUNITY,
     })
 items.sort(key=lambda i: i['name'])
 
@@ -260,7 +301,7 @@ def parse_time(s):
 
 
 meta_by_id = {r['id']: r for r in META_REGS}
-reg_ids = sorted(set(meta_by_id) | set(legal))
+reg_ids = sorted(set(meta_by_id) | set(all_legal))
 regulations = []
 prev_list = None
 for rid in reg_ids:
@@ -276,11 +317,19 @@ for rid in reg_ids:
         if prev_list is not None:
             r['newVsPrevious'] = sorted(k for k in lst if k not in prev_list)
         prev_list = lst
+    elif rid in provisional:
+        lst = provisional[rid]
+        r.update({'version': 0, 'provisional': True, 'counts': reg_counts(lst),
+                  'allowedPokemon': sorted(k for k in lst if team_selectable(k)),
+                  'newVsPrevious': sorted(k for k in lst if k not in (prev_list or [])),
+                  'verification': PENDING,
+                  'source': m.get('source', '') + '; provisional list = ' + m['provisional']['basedOn'] + ' + officially named Pokémon',
+                  'allowedPokemonNote': 'Provisional: only officially named additions are included.'})
     else:
         r.update({'version': 0, 'allowedPokemon': None, 'verification': PENDING,
                   'source': m.get('source', 'unknown'),
                   'allowedPokemonNote': m.get('note', 'Not yet in any data source.')})
-    if m.get('announced') and rid not in legal:
+    if m.get('announced') and rid not in legal:  # also kept for provisional lists
         r['announced'] = m['announced']
     regulations.append(r)
 
@@ -330,6 +379,7 @@ meta = {
                'learnsets': len(learnsets), 'missingLearnsets': missing_learnsets},
 }
 bundle = {'meta': meta, 'regulations': regulations, 'mechanics': MECHANICS, 'types': TYPES,
+          'balancePatches': META.get('balancePatches', []),
           'typeChart': type_chart, 'natures': nat, 'pokemon': pokemon, 'moves': moves,
           'abilities': abilities, 'items': items, 'learnsets': learnsets}
 with open(args.out, 'w', encoding='utf-8') as fh:

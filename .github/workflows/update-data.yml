@@ -1,13 +1,13 @@
 name: Update data
 
-# Rebuilds the Champions data snapshot from Pokémon Showdown. Runs daily at 11:00 HKT and
+# Rebuilds the Champions data snapshot from Pokémon Showdown. Runs daily at 03:00 HKT and
 # on demand (Actions → Update data → Run workflow). When the Champions data changed it:
 #   1. publishes a "資料更新" release with champions_data.json (import it in the app), and
 #   2. commits the snapshot into the app and builds a new APK that ships with it.
 
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 19 * * *'   # 03:00 Hong Kong time
   workflow_dispatch:
 
 permissions:

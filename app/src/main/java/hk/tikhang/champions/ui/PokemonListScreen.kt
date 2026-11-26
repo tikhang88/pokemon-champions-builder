@@ -35,6 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import hk.tikhang.champions.core.Pokemon
+import hk.tikhang.champions.core.Regulation
+import hk.tikhang.champions.core.Verification
 import hk.tikhang.champions.core.Stat
 import hk.tikhang.champions.core.toId
 import hk.tikhang.champions.data.DataState
@@ -44,16 +46,21 @@ private enum class SortBy(val zh: String) {
 }
 
 @Composable
-fun PokemonListScreen(state: DataState, onBack: () -> Unit, open: (String) -> Unit) {
+fun PokemonListScreen(
+    state: DataState, onBack: () -> Unit,
+    /** Picking for a team: only out-of-battle forms of [regulation] are shown. */
+    pickMode: Boolean = false, regulation: Regulation = state.regulation,
+    open: (String) -> Unit,
+) {
     val s = state.snapshot
     var query by rememberSaveable { mutableStateOf("") }
     var type by rememberSaveable { mutableStateOf<String?>(null) }
     var sort by rememberSaveable { mutableStateOf(SortBy.DEX) }
-    var showMega by rememberSaveable { mutableStateOf(true) }
+    var showMega by rememberSaveable { mutableStateOf(!pickMode) }
     var megaOnly by rememberSaveable { mutableStateOf(false) }
 
     // Spec §4.3: the list only shows Pokémon allowed in the selected Regulation.
-    val allowed = remember(state.regulation) { state.regulation.allowedPokemon?.toSet() }
+    val allowed = remember(regulation) { regulation.allowedPokemon?.toSet() }
     val pool = remember(s, allowed) {
         s.pokemon.filter { it.teamSelectable && (allowed == null || it.id in allowed) }
     }
@@ -62,6 +69,7 @@ fun PokemonListScreen(state: DataState, onBack: () -> Unit, open: (String) -> Un
         val qid = toId(q)
         pool.asSequence()
             .filter { if (megaOnly) it.isMega else showMega || !it.isMega }
+            .filter { !pickMode || !it.isMega }
             .filter { type == null || type in it.types }
             .filter { p ->
                 q.isEmpty() || s.displayName(p).contains(q) || toId(p.name).contains(qid) ||
@@ -72,7 +80,7 @@ fun PokemonListScreen(state: DataState, onBack: () -> Unit, open: (String) -> Un
             .toList()
     }
 
-    Screen("Pokémon 圖鑑", onBack, subtitle = "${state.regulation.name}・${list.size} / ${pool.size}") { pad ->
+    Screen(if (pickMode) "選擇 Pokémon" else "Pokémon 圖鑑", onBack, subtitle = "${regulation.name}・${list.size} / ${pool.size}") { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -82,8 +90,10 @@ fun PokemonListScreen(state: DataState, onBack: () -> Unit, open: (String) -> Un
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Picker(type?.let { TypeZh[it] } ?: "全部屬性", listOf<String?>(null) + s.types, { it?.let { t -> TypeZh[t] } ?: "全部屬性" }) { type = it }
                     Picker("排序：${sort.zh}", SortBy.entries.toList(), { it.zh }) { sort = it }
-                    FilterChip(selected = showMega && !megaOnly, onClick = { showMega = !showMega; megaOnly = false }, label = { Text("包括 Mega") })
-                    FilterChip(selected = megaOnly, onClick = { megaOnly = !megaOnly }, label = { Text("只看 Mega") })
+                    if (!pickMode) {
+                        FilterChip(selected = showMega && !megaOnly, onClick = { showMega = !showMega; megaOnly = false }, label = { Text("包括 Mega") })
+                        FilterChip(selected = megaOnly, onClick = { megaOnly = !megaOnly }, label = { Text("只看 Mega") })
+                    }
                 }
             }
             LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -130,6 +140,7 @@ private fun PokemonRow(state: DataState, p: Pokemon, sort: SortBy, onClick: () -
                     Text(dex(p.num), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(s.displayName(p), style = MaterialTheme.typography.titleSmall)
                     if (p.isMega) Badge("Mega", Color(0xFF8E24AA))
+                    if (p.verification == Verification.PENDING) Badge("待驗證", Color(0xFFB26A00))
                 }
                 Text(p.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TypeRow(p.types)

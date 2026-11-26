@@ -42,6 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import hk.tikhang.champions.core.Move
 import hk.tikhang.champions.core.Pokemon
+import hk.tikhang.champions.core.RegulationEngine
+import java.time.Instant
 import hk.tikhang.champions.core.Stat
 import hk.tikhang.champions.core.StatsEngine
 import hk.tikhang.champions.core.toId
@@ -62,7 +64,7 @@ fun PokemonDetailScreen(state: DataState, id: String, onBack: () -> Unit, open: 
     }
     // The page is about the base form; Mega forms are reached with the Mega Toggle (spec §6.1).
     val base = if (requested.isMega) s.pokemonById[requested.megaOf] ?: requested else requested
-    val megas = remember(base.id) { s.megasOf(base.id) }
+    val megas = remember(base.id) { s.megaOptions(base) }
     var formId by rememberSaveable(id) { mutableStateOf(requested.id) }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val form = s.pokemonById[formId] ?: base
@@ -207,16 +209,27 @@ private fun StatBar(st: Stat, value: Int, range: IntRange) {
 
 private fun LazyListScope.moves(state: DataState, p: Pokemon) {
     val s = state.snapshot
+    val now = Instant.now()
     val ids = s.learnsets[p.id] ?: s.learnsets[p.megaOf ?: ""] ?: emptyList()
     val list = ids.mapNotNull { s.moveById[it] }.sortedWith(compareBy({ it.category == "Status" }, { it.type }, { -it.basePower }))
+    val newMoves = (RegulationEngine.upcomingNewMoves(s, p.id, now) + RegulationEngine.upcomingNewMoves(s, p.megaOf ?: p.baseId, now)).distinctBy { it.second }
     item {
-        Text("${list.size} 個可學招式（Champions 招式表）・Mega 形態沿用原本形態的招式表", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val source = if (p.hasPlaceholderLearnset) "暫用 Scarlet/Violet 招式表，待 Champions 確認" else "Champions 招式表"
+        Text("${list.size} 個可學招式（$source）・Mega 形態沿用原本形態的招式表", style = MaterialTheme.typography.bodySmall,
+            color = if (p.hasPlaceholderLearnset) Color(0xFFB26A00) else MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    items(list, key = { it.id }) { MoveRow(it) }
+    if (newMoves.isNotEmpty()) item {
+        SectionCard("即將新增（官方公布）") {
+            newMoves.forEach { (patch, id) ->
+                Text("${localTime(patch.effectiveDate)} 起可學：${s.moveById[id]?.let { it.nameZh ?: it.name } ?: id}", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+    items(list, key = { it.id }) { m -> MoveRow(m, RegulationEngine.upcomingMoveChanges(s, m.id, now).map { (patch, c) -> "${localTime(patch.effectiveDate)} 起：${c.text}" }) }
 }
 
 @Composable
-private fun MoveRow(m: Move) {
+private fun MoveRow(m: Move, upcoming: List<String> = emptyList()) {
     SectionCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(m.nameZh ?: m.name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
@@ -235,6 +248,7 @@ private fun MoveRow(m: Move) {
             Badge("Champions 已調整", Color(0xFFB26A00))
             mainSeriesText(m)?.let { Text("主系列：$it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
+        upcoming.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = Color(0xFFB26A00)) }
     }
 }
 
@@ -254,6 +268,8 @@ private fun mainSeriesText(m: Move): String? {
 
 private fun LazyListScope.abilities(state: DataState, p: Pokemon) {
     val s = state.snapshot
+    val now = Instant.now()
+    p.abilityNote?.let { item { Text("此特性來自官方公布，資料來源未有 Champions 數據。", style = MaterialTheme.typography.bodySmall, color = Color(0xFFB26A00)) } }
     items(p.abilities) { name ->
         val a = s.ability(name)
         SectionCard {
@@ -264,6 +280,9 @@ private fun LazyListScope.abilities(state: DataState, p: Pokemon) {
             Text(name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(a?.shortDescZh ?: a?.shortDesc ?: "未有說明", style = MaterialTheme.typography.bodyMedium)
             if (a?.shortDescZh != null && a.shortDesc != null) Text(a.shortDesc!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            RegulationEngine.upcomingAbilityChanges(s, toId(name), now).forEach { (patch, c) ->
+                Text("${localTime(patch.effectiveDate)} 起：${c.text}", style = MaterialTheme.typography.bodySmall, color = Color(0xFFB26A00))
+            }
         }
     }
 }

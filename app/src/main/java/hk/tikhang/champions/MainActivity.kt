@@ -30,6 +30,10 @@ import hk.tikhang.champions.ui.PokemonDetailScreen
 import hk.tikhang.champions.ui.PokemonListScreen
 import hk.tikhang.champions.ui.RegulationDetailScreen
 import hk.tikhang.champions.ui.RegulationListScreen
+import hk.tikhang.champions.ui.SlotEditorScreen
+import hk.tikhang.champions.ui.TeamEditorScreen
+import hk.tikhang.champions.ui.TeamsScreen
+import hk.tikhang.champions.core.TeamEngine
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,6 +54,13 @@ object Routes {
     const val REGULATIONS = "regulations"
     const val REGULATION = "regulation/{id}"
     const val DATA = "data"
+    const val TEAMS = "teams"
+    const val TEAM = "team/{id}"
+    const val PICK = "team/{id}/pick/{slot}"
+    const val SLOT = "team/{id}/slot/{slot}"
+    fun team(id: Long) = "team/$id"
+    fun pick(id: Long, slot: Int) = "team/$id/pick/$slot"
+    fun slot(id: Long, slot: Int) = "team/$id/slot/$slot"
     fun pokemon(id: String) = "pokemon/$id"
     fun regulation(id: String) = "regulation/$id"
 }
@@ -83,5 +94,29 @@ private fun App(vm: AppViewModel = viewModel()) {
             RegulationDetailScreen(vm, state, entry.arguments?.getString("id").orEmpty(), onBack = back) { nav.navigate(Routes.pokemon(it)) }
         }
         composable(Routes.DATA) { DataUpdateScreen(vm, state, onBack = back) }
+        composable(Routes.TEAMS) { TeamsScreen(vm, state, onBack = back) { nav.navigate(Routes.team(it)) } }
+        composable(Routes.TEAM, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+            val id = entry.arguments?.getLong("id") ?: 0L
+            TeamEditorScreen(vm, state, id, onBack = back,
+                pickPokemon = { nav.navigate(Routes.pick(id, it)) }, editSlot = { nav.navigate(Routes.slot(id, it)) })
+        }
+        composable(Routes.PICK, arguments = listOf(navArgument("id") { type = NavType.LongType }, navArgument("slot") { type = NavType.IntType })) { entry ->
+            val id = entry.arguments?.getLong("id") ?: 0L
+            val slotIndex = entry.arguments?.getInt("slot") ?: 0
+            val teams by vm.teams.collectAsStateWithLifecycle()
+            val team = teams.firstOrNull { it.id == id }?.team()
+            val reg = team?.let { state.snapshot.regulationById[it.regulationId] } ?: state.regulation
+            PokemonListScreen(state, onBack = back, pickMode = true, regulation = reg) { speciesId ->
+                if (team != null) {
+                    vm.saveTeam(id, team.withSlot(slotIndex, TeamEngine.newSlot(state.snapshot, speciesId)))
+                    nav.navigate(Routes.slot(id, slotIndex)) { popUpTo(Routes.TEAM) { inclusive = false } }
+                }
+            }
+        }
+        composable(Routes.SLOT, arguments = listOf(navArgument("id") { type = NavType.LongType }, navArgument("slot") { type = NavType.IntType })) { entry ->
+            val id = entry.arguments?.getLong("id") ?: 0L
+            val slotIndex = entry.arguments?.getInt("slot") ?: 0
+            SlotEditorScreen(vm, state, id, slotIndex, onBack = back) { nav.navigate(Routes.pick(id, slotIndex)) }
+        }
     }
 }

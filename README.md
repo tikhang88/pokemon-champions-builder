@@ -1,12 +1,22 @@
-# Pokémon Champions 隊伍研究（Team Builder & Battle Simulator）
+# Pokémon Champion 隊伍模擬器
 
 個人用 Android App，用於 Pokémon Champions 的競技資料查閱、隊伍構築及分析。完全離線可用。
 
-目前版本：**V1.1（Phase 2：Team Builder ＋ M-D 暫定資料）**
+目前版本：**V1.2（Phase 3：Team Analysis）**
 
 ## 功能
 
-### V1.1 新增
+### V1.2 新增
+- **隊伍分析**（在隊伍頁按「隊伍分析」）：
+  - 總覽：屬性分佈、防守／攻擊摘要、物理／特殊／變化分佈、每位成員角色、速度分佈。
+  - 防守矩陣：18 種攻擊屬性 × 每位成員的倍率，已計特性（Levitate、Thick Fat、Filter 等）；標示共同弱點、無人抵抗的屬性。
+  - 攻擊覆蓋：以實際招式計算，已計 Pixilate／Dragonize 等特性及 Freeze-Dry 等特殊招式；列出覆蓋缺口及難以打擊的 Pokémon。
+  - 配合：速度控制、先制、輔助、強化、Pivot、異常狀態、守住、天氣、場地。
+  - 報告：優勢、弱點、覆蓋缺口、配合、改善方向（每個建議都列出原隊伍問題、理由、優勢、代價及可能新弱點，並提供不更換成員的做法）。
+  - 可切換以 Mega 形態或原本形態分析。
+- App 改名為「Pokémon Champion 隊伍模擬器」及更換 Icon。
+
+### V1.1
 - **Team Builder**：建立、儲存、重新命名、複製、刪除隊伍；6 個隊員位置；選擇 Regulation 及單打／雙打。
 - **隊員設定**：特性、道具、性格（顯示↑↓）、Stat Points（66／32，即時顯示 Lv50 能力值）、4 個招式（只列 Champions 招式表內的招式）。
 - **Mega Toggle**：選擇 Mega 形態會自動裝備 Mega Stone，並同步更新屬性、特性及能力值。
@@ -72,8 +82,8 @@ data/          最新資料快照
 | 0 | 研究及可行性 | ✅ |
 | 1 | Data Foundation、資料匯入 | ✅ V1.0 |
 | 2 | Team Builder、合法性檢查 | ✅ V1.1 |
-| 3 | Team Analysis | 下一步 |
-| 4 | Coverage Matrix、Speed Tier、Matchup | |
+| 3 | Team Analysis | ✅ V1.2 |
+| 4 | Coverage Matrix、Speed Tier、Matchup | 下一步 |
 | 5 | Damage Calculator | |
 | 6 | Battle Simulator | |
 | 7–8 | 完整離線整合、測試及發佈 | |

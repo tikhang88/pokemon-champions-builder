@@ -82,7 +82,7 @@ jobs:
           fail_on_unmatched_files: true
           name: App V${{ env.APP_VERSION_NAME }}
           body: |
-            Pokémon Champions 隊伍研究 App V${{ env.APP_VERSION_NAME }}
+            Pokémon Champion 隊伍模擬器 V${{ env.APP_VERSION_NAME }}
             下載下方的 APK，在 Android 手機安裝。
           files: out/*.apk
           make_latest: true

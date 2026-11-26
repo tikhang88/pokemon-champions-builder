@@ -144,7 +144,7 @@ fun shareText(context: android.content.Context, title: String, text: String) {
 @Composable
 fun TeamEditorScreen(
     vm: AppViewModel, state: DataState, teamId: Long, onBack: () -> Unit,
-    pickPokemon: (slot: Int) -> Unit, editSlot: (slot: Int) -> Unit,
+    pickPokemon: (slot: Int) -> Unit, editSlot: (slot: Int) -> Unit, analyse: () -> Unit,
 ) {
     val teams by vm.teams.collectAsStateWithLifecycle()
     val entity = teams.firstOrNull { it.id == teamId }
@@ -174,6 +174,11 @@ fun TeamEditorScreen(
                 }
             }
             item { LegalityCard(report) }
+            item {
+                androidx.compose.material3.Button(onClick = analyse, Modifier.fillMaxWidth(), enabled = team.members.isNotEmpty()) {
+                    Text("隊伍分析（屬性覆蓋・弱點・配合・報告）")
+                }
+            }
             items(TEAM_SIZE) { i ->
                 val slot = team.slots.getOrNull(i)
                 if (slot == null) {

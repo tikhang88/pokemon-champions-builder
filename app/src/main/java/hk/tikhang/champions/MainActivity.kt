@@ -31,6 +31,7 @@ import hk.tikhang.champions.ui.PokemonListScreen
 import hk.tikhang.champions.ui.RegulationDetailScreen
 import hk.tikhang.champions.ui.RegulationListScreen
 import hk.tikhang.champions.ui.SlotEditorScreen
+import hk.tikhang.champions.ui.TeamAnalysisScreen
 import hk.tikhang.champions.ui.TeamEditorScreen
 import hk.tikhang.champions.ui.TeamsScreen
 import hk.tikhang.champions.core.TeamEngine
@@ -58,6 +59,8 @@ object Routes {
     const val TEAM = "team/{id}"
     const val PICK = "team/{id}/pick/{slot}"
     const val SLOT = "team/{id}/slot/{slot}"
+    const val ANALYSIS = "team/{id}/analysis"
+    fun analysis(id: Long) = "team/$id/analysis"
     fun team(id: Long) = "team/$id"
     fun pick(id: Long, slot: Int) = "team/$id/pick/$slot"
     fun slot(id: Long, slot: Int) = "team/$id/slot/$slot"
@@ -98,7 +101,11 @@ private fun App(vm: AppViewModel = viewModel()) {
         composable(Routes.TEAM, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
             val id = entry.arguments?.getLong("id") ?: 0L
             TeamEditorScreen(vm, state, id, onBack = back,
-                pickPokemon = { nav.navigate(Routes.pick(id, it)) }, editSlot = { nav.navigate(Routes.slot(id, it)) })
+                pickPokemon = { nav.navigate(Routes.pick(id, it)) }, editSlot = { nav.navigate(Routes.slot(id, it)) },
+                analyse = { nav.navigate(Routes.analysis(id)) })
+        }
+        composable(Routes.ANALYSIS, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+            TeamAnalysisScreen(vm, state, entry.arguments?.getLong("id") ?: 0L, onBack = back) { nav.navigate(Routes.pokemon(it)) }
         }
         composable(Routes.PICK, arguments = listOf(navArgument("id") { type = NavType.LongType }, navArgument("slot") { type = NavType.IntType })) { entry ->
             val id = entry.arguments?.getLong("id") ?: 0L

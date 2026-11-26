@@ -61,7 +61,7 @@ fun Screen(title: String, onBack: (() -> Unit)?, subtitle: String? = null, conte
 fun HomeScreen(vm: AppViewModel, state: DataState, navigate: (String) -> Unit) {
     val online by vm.online.collectAsStateWithLifecycle()
     val meta = state.snapshot.meta
-    Screen("Champions 隊伍研究", onBack = null) { pad ->
+    Screen("Pokémon Champion 隊伍模擬器", onBack = null) { pad ->
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),
             contentPadding = PaddingValues(16.dp),
@@ -98,14 +98,14 @@ fun HomeScreen(vm: AppViewModel, state: DataState, navigate: (String) -> Unit) {
                     }
                 }
             }
-            item { MenuItem("Team Builder", "建立及保存隊伍、Mega Toggle、Stat Points、招式、合法性檢查") { navigate(Routes.TEAMS) } }
+            item { MenuItem("Team Builder", "建立及保存隊伍、合法性檢查、隊伍分析（屬性覆蓋・弱點・配合・報告）") { navigate(Routes.TEAMS) } }
             item { MenuItem("Pokémon 圖鑑", "搜尋、篩選、能力值、招式、Mega 比較") { navigate(Routes.POKEDEX) } }
             item { MenuItem("Regulation", "目前及歷史規則、可用 Pokémon、切換 Regulation") { navigate(Routes.REGULATIONS) } }
             item { MenuItem("資料更新", "匯入新資料（例如 12 月 2 日的 M-D）、還原、更新紀錄") { navigate(Routes.DATA) } }
             item {
                 SectionCard("之後的版本") {
                     listOf(
-                        "Team Analysis・Coverage Matrix" to "Phase 3",
+                        "Coverage Matrix（互動）" to "Phase 4",
                         "Speed Tier・Matchup Research" to "Phase 4",
                         "Damage Calculator" to "Phase 5",
                         "Battle Simulator" to "Phase 6",

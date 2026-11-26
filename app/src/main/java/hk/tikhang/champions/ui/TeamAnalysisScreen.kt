@@ -48,7 +48,7 @@ import hk.tikhang.champions.core.TeamAnalysisEngine.Effect
 import hk.tikhang.champions.data.AppViewModel
 import hk.tikhang.champions.data.DataState
 
-private val AnalysisTabs = listOf("總覽", "防守", "攻擊", "配合", "報告")
+private val AnalysisTabs = listOf("總覽", "Coverage Matrix", "防守", "攻擊", "配合", "報告")
 
 /** Team Analysis Dashboard (spec §8.5) and Report (spec §8.6). */
 @Composable
@@ -82,12 +82,13 @@ fun TeamAnalysisScreen(vm: AppViewModel, state: DataState, teamId: Long, onBack:
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (tab) {
                     0 -> item { Overview(a) }
-                    1 -> item { DefenseMatrix(a) }
-                    2 -> {
+                    1 -> item { CoverageMatrix(a) }
+                    2 -> item { DefenseMatrix(a) }
+                    3 -> {
                         item { OffenseTable(a) }
                         item { ThreatList("隊伍招式難以打擊的 Pokémon", "按屬性計算，未計對手特性及道具", a.walls, state, openPokemon) }
                     }
-                    3 -> {
+                    4 -> {
                         item { SynergyCard(a) }
                         item { ThreatList("屬性上威脅較大的 Pokémon", "對手本身屬性（STAB）可效果絕佳打擊一半或以上成員；未計實際招式", a.stabThreats, state, openPokemon) }
                     }
@@ -323,5 +324,75 @@ private fun ReportSection(title: String, lines: List<String>, color: Color) {
     SectionCard(title) {
         if (lines.isEmpty()) Text("沒有", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         lines.forEach { Text("・$it", style = MaterialTheme.typography.bodyMedium, color = color) }
+    }
+}
+
+
+// ---- Coverage Matrix (spec §9.4–9.6) ------------------------------------------------------
+
+@Composable
+private fun CoverageMatrix(a: Analysis) {
+    var selected by remember { mutableStateOf<String?>(null) }
+    val hasMoves = a.members.any { it.damaging.isNotEmpty() }
+    SectionCard("Coverage Matrix") {
+        Row(Modifier.fillMaxWidth()) {
+            listOf("屬性" to 1.1f, "防守" to 1.4f, "攻擊" to 1.2f, "備註" to 1.6f).forEach { (h, w) ->
+                Text(h, Modifier.weight(w), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+        }
+        a.defense.forEach { d ->
+            val o = a.offense.first { it.type == d.type }
+            val defLabel = when {
+                d.isShared -> "共同弱點"
+                d.weak > d.resist + d.immune -> "偏弱"
+                d.resist + d.immune > d.weak -> if (d.immune > 0) "抵抗／無效" else "抵抗"
+                else -> "中立"
+            }
+            val defColor = when (defLabel) { "共同弱點" -> Color(0xFFC62828); "偏弱" -> Color(0xFFE65100); "中立" -> MaterialTheme.colorScheme.onSurfaceVariant; else -> Color(0xFF2E7D32) }
+            val offLabel = when {
+                !hasMoves -> "—"
+                o.superEffective.isNotEmpty() -> "絕佳×${o.superEffectiveMembers}"
+                o.best == 1.0 -> "一般"
+                else -> "缺口"
+            }
+            val offColor = when { !hasMoves -> MaterialTheme.colorScheme.onSurfaceVariant; o.superEffective.isNotEmpty() -> Color(0xFF2E7D32); o.best == 1.0 -> MaterialTheme.colorScheme.onSurfaceVariant; else -> Color(0xFFC62828) }
+            val notes = buildList {
+                if (d.isGap && d.weak > 0) add("無人抵抗")
+                if (d.perMember.any { it >= 4.0 }) add("有4倍弱")
+                if (hasMoves && o.superEffectiveMembers >= 3) add("重複覆蓋")
+            }.joinToString("、")
+            Row(
+                Modifier.fillMaxWidth().background(if (selected == d.type) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                    .clickable { selected = if (selected == d.type) null else d.type }.padding(vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.weight(1.1f)) { TypeChip(d.type) }
+                Text("$defLabel\n弱${d.weak}・抗${d.resist}・無${d.immune}", Modifier.weight(1.4f), fontSize = 11.sp, color = defColor)
+                Text(offLabel, Modifier.weight(1.2f), fontSize = 12.sp, color = offColor, fontWeight = FontWeight.Bold)
+                Text(notes, Modifier.weight(1.6f), fontSize = 11.sp)
+            }
+            if (selected == d.type) CoverageDetail(a, d.type)
+        }
+        Text("點擊屬性查看哪些成員弱／抵抗、哪些成員及招式可以攻擊該屬性。Mega Toggle 會即時更新矩陣。",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun CoverageDetail(a: Analysis, type: String) {
+    val d = a.defense.first { it.type == type }
+    val o = a.offense.first { it.type == type }
+    fun names(pred: (Double) -> Boolean) = a.members.filterIndexed { i, _ -> pred(d.perMember[i]) }
+        .joinToString("、") { m -> "${m.name}（×${TeamAnalysisEngine.fmt(d.perMember[a.members.indexOf(m)])}）" }.ifEmpty { "沒有" }
+    Column(Modifier.fillMaxWidth().padding(start = 8.dp, top = 4.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text("對 ${TypeZh[type]} 屬性招式", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Text("弱：" + names { it > 1.0 }, fontSize = 12.sp, color = Color(0xFFC62828))
+        Text("抵抗：" + names { it > 0.0 && it < 1.0 }, fontSize = 12.sp, color = Color(0xFF2E7D32))
+        Text("無效：" + names { it == 0.0 }, fontSize = 12.sp)
+        Text("攻擊 ${TypeZh[type]} 屬性", fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        Text("效果絕佳：" + o.superEffective.distinctBy { it.member.index to it.move.id }
+            .joinToString("、") { "${it.member.name}・${it.move.nameZh ?: it.move.name}（${TypeZh[it.type]}）" }.ifEmpty { "沒有" }, fontSize = 12.sp)
+        val neutral = o.hits.filter { it.multiplier == 1.0 }.map { it.member.name }.distinct()
+        if (neutral.isNotEmpty()) Text("一般傷害：" + neutral.joinToString("、"), fontSize = 12.sp)
     }
 }

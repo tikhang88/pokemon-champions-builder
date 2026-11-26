@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -60,14 +63,31 @@ fun issueColor(l: LegalityIssue.Level): Color = when (l) {
 
 @Composable
 fun TeamsScreen(vm: AppViewModel, state: DataState, onBack: () -> Unit, open: (Long) -> Unit) {
-    val teams by vm.teams.collectAsStateWithLifecycle()
+    val allTeams by vm.teams.collectAsStateWithLifecycle()
+    var showOpponents by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val teams = allTeams.filter { (it.team()?.opponent ?: false) == showOpponents }
     var renaming by remember { mutableStateOf<Pair<Long, Team>?>(null) }
     var deleting by remember { mutableStateOf<Pair<Long, String>?>(null) }
+    var importing by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    Screen("Team Builder", onBack, subtitle = "${teams.size} 個隊伍") { pad ->
+    Screen("Team Builder", onBack, subtitle = "${teams.size} 個${if (showOpponents) "對手" else ""}隊伍") { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item { Button(onClick = { vm.createTeam(open) }, Modifier.fillMaxWidth()) { Text("建立新隊伍") } }
-            if (teams.isEmpty()) item { Text("未有隊伍。建立第一個隊伍開始構築。", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.FilterChip(selected = !showOpponents, onClick = { showOpponents = false }, label = { Text("我的隊伍") })
+                    androidx.compose.material3.FilterChip(selected = showOpponents, onClick = { showOpponents = true }, label = { Text("對手隊伍（Matchup 用）") })
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { vm.createTeam(showOpponents, open) }, Modifier.weight(1f)) { Text(if (showOpponents) "建立對手隊伍" else "建立新隊伍") }
+                    OutlinedButton(onClick = { importing = true }, Modifier.weight(1f)) { Text("匯入隊伍文字") }
+                }
+            }
+            if (teams.isEmpty()) item {
+                Text(if (showOpponents) "未有對手隊伍。建立或匯入對手隊伍後，可在自己隊伍的「Matchup 研究」中使用。" else "未有隊伍。建立第一個隊伍開始構築。",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             items(teams, key = { it.id }) { e ->
                 val team = e.team()
                 if (team == null) {
@@ -82,6 +102,7 @@ fun TeamsScreen(vm: AppViewModel, state: DataState, onBack: () -> Unit, open: (L
         }
     }
     renaming?.let { (id, team) -> RenameDialog(team.name, { vm.saveTeam(id, team.copy(name = it)); renaming = null }) { renaming = null } }
+    if (importing) ImportTeamDialog(vm, showOpponents, onDone = { id -> importing = false; id?.let(open) }) { importing = false }
     deleting?.let { (id, name) ->
         AlertDialog(
             onDismissRequest = { deleting = null }, title = { Text("刪除「$name」？") }, text = { Text("刪除後不能還原。") },
@@ -113,6 +134,7 @@ private fun TeamCard(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (team.opponent) Badge("對手", Color(0xFF6D4C41))
                 Badge(report.result.zh, legalityColor(report.result))
                 Badge(team.regulationId, MaterialTheme.colorScheme.secondary)
                 Badge(team.format.zh, MaterialTheme.colorScheme.tertiary)
@@ -121,6 +143,7 @@ private fun TeamCard(
                 team.members.mapNotNull { sl -> TeamEngine.effectiveForm(s, sl)?.let { s.displayName(it) } }.joinToString("、").ifEmpty { "（空）" },
                 style = MaterialTheme.typography.bodyMedium,
             )
+            if (team.teamCode.isNotBlank()) Text("隊伍碼 ${team.teamCode}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -145,6 +168,7 @@ fun shareText(context: android.content.Context, title: String, text: String) {
 fun TeamEditorScreen(
     vm: AppViewModel, state: DataState, teamId: Long, onBack: () -> Unit,
     pickPokemon: (slot: Int) -> Unit, editSlot: (slot: Int) -> Unit, analyse: () -> Unit,
+    speedTier: () -> Unit = {}, matchup: () -> Unit = {},
 ) {
     val teams by vm.teams.collectAsStateWithLifecycle()
     val entity = teams.firstOrNull { it.id == teamId }
@@ -156,6 +180,7 @@ fun TeamEditorScreen(
     val s = state.snapshot
     val report = LegalityEngine.check(s, team)
     var renaming by remember { mutableStateOf(false) }
+    var editingCode by remember { mutableStateOf(false) }
     val context = LocalContext.current
     fun save(t: Team) = vm.saveTeam(teamId, t)
 
@@ -171,13 +196,24 @@ fun TeamEditorScreen(
                         Picker("格式：${team.format.zh}", BattleFormat.entries.toList(), { it.zh }) { save(team.copy(format = it)) }
                         OutlinedButton(onClick = { shareText(context, team.name, TeamEngine.exportText(s, team)) }) { Text("匯出文字") }
                     }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("隊伍碼：" + team.teamCode.ifBlank { "未設定" }, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        TextButton(onClick = { editingCode = true }) { Text("編輯") }
+                        if (team.teamCode.isNotBlank()) TextButton(onClick = { copyText(context, team.teamCode) }) { Text("複製") }
+                    }
+                    if (team.opponent) Text("這是對手隊伍，用於 Matchup 研究。", style = MaterialTheme.typography.bodySmall, color = Color(0xFF6D4C41))
                 }
             }
             item { LegalityCard(report) }
-            item {
+            item { Column {
                 androidx.compose.material3.Button(onClick = analyse, Modifier.fillMaxWidth(), enabled = team.members.isNotEmpty()) {
-                    Text("隊伍分析（屬性覆蓋・弱點・配合・報告）")
+                    Text("隊伍分析（Coverage Matrix・弱點・配合・報告）")
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    OutlinedButton(onClick = speedTier, Modifier.weight(1f), enabled = team.members.isNotEmpty()) { Text("Speed Tier") }
+                    if (!team.opponent) OutlinedButton(onClick = matchup, Modifier.weight(1f), enabled = team.members.isNotEmpty()) { Text("Matchup 研究") }
+                }
+            }
             }
             items(TEAM_SIZE) { i ->
                 val slot = team.slots.getOrNull(i)
@@ -198,6 +234,7 @@ fun TeamEditorScreen(
         }
     }
     if (renaming) RenameDialog(team.name, { save(team.copy(name = it)); renaming = false }) { renaming = false }
+    if (editingCode) TeamCodeDialog(team.teamCode, { save(team.copy(teamCode = it)); editingCode = false }) { editingCode = false }
 }
 
 @Composable
@@ -236,4 +273,67 @@ private fun SlotCard(state: DataState, slot: hk.tikhang.champions.core.TeamSlot,
             issues.forEach { Text("・${it.message}", color = issueColor(it.level), style = MaterialTheme.typography.bodySmall) }
         }
     }
+}
+
+
+fun copyText(context: android.content.Context, text: String) {
+    val cm = context.getSystemService(android.content.ClipboardManager::class.java)
+    cm?.setPrimaryClip(android.content.ClipData.newPlainText("隊伍碼", text))
+}
+
+/** The Replica Team ID is kept with the team for use in the game; it can't be decoded offline. */
+@Composable
+fun TeamCodeDialog(current: String, onSave: (String) -> Unit, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf(current) }
+    val valid = text.isBlank() || hk.tikhang.champions.core.TeamTextImporter.isValidTeamCode(text)
+    AlertDialog(
+        onDismissRequest = onDismiss, title = { Text("隊伍碼（Replica Team ID）") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = text, onValueChange = { text = it.uppercase().filter { c -> c.isLetterOrDigit() }.take(10) },
+                    singleLine = true, isError = !valid, label = { Text("10 位英文字母／數字") })
+                Text("隊伍碼由遊戲伺服器解讀，本身不包含隊伍資料，所以 App 不能用隊伍碼讀取隊伍。這裏只作記錄，方便你在遊戲內「以隊伍 ID 建立隊伍」。", style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(text.trim()) }, enabled = valid) { Text("儲存") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+    )
+}
+
+@Composable
+fun ImportTeamDialog(vm: AppViewModel, opponent: Boolean, onDone: (Long?) -> Unit, onDismiss: () -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf("") }
+    var result by remember { mutableStateOf<Pair<hk.tikhang.champions.core.TeamTextImporter.Result, Long?>?>(null) }
+    val r = result
+    if (r != null) {
+        AlertDialog(
+            onDismissRequest = { onDone(r.second) },
+            title = { Text(if (r.first.imported > 0) "已匯入 ${r.first.imported} 隻" else "未能匯入") },
+            text = {
+                Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                    if (r.first.warnings.isEmpty()) Text("全部資料已讀取。")
+                    r.first.warnings.forEach { Text("・$it", style = MaterialTheme.typography.bodySmall) }
+                }
+            },
+            confirmButton = { TextButton(onClick = { onDone(r.second) }) { Text(if (r.second != null) "開啟隊伍" else "好") } },
+        )
+        return
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (opponent) "匯入對手隊伍" else "匯入隊伍") },
+        text = {
+            Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("貼上 Pokémon Showdown／PokePaste 格式的隊伍文字（例如 Game8、dexdb 等網站提供的隊伍）。支援英文及繁體中文名稱。", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(value = name, onValueChange = { name = it.take(40) }, singleLine = true, label = { Text("隊伍名稱") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = code, onValueChange = { code = it.uppercase().filter { c -> c.isLetterOrDigit() }.take(10) }, singleLine = true,
+                    label = { Text("隊伍碼（可選）") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text("隊伍文字") }, minLines = 6, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = { TextButton(onClick = { vm.importTeam(text, name, code, opponent) { res, id -> result = res to id } }, enabled = text.isNotBlank()) { Text("匯入") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+    )
 }

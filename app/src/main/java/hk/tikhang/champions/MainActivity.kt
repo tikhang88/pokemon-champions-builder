@@ -32,6 +32,8 @@ import hk.tikhang.champions.ui.RegulationDetailScreen
 import hk.tikhang.champions.ui.RegulationListScreen
 import hk.tikhang.champions.ui.SlotEditorScreen
 import hk.tikhang.champions.ui.TeamAnalysisScreen
+import hk.tikhang.champions.ui.SpeedTierScreen
+import hk.tikhang.champions.ui.MatchupScreen
 import hk.tikhang.champions.ui.TeamEditorScreen
 import hk.tikhang.champions.ui.TeamsScreen
 import hk.tikhang.champions.core.TeamEngine
@@ -60,6 +62,10 @@ object Routes {
     const val PICK = "team/{id}/pick/{slot}"
     const val SLOT = "team/{id}/slot/{slot}"
     const val ANALYSIS = "team/{id}/analysis"
+    const val SPEED = "speed/{id}"
+    const val MATCHUP = "team/{id}/matchup"
+    fun speed(id: Long) = "speed/$id"
+    fun matchup(id: Long) = "team/$id/matchup"
     fun analysis(id: Long) = "team/$id/analysis"
     fun team(id: Long) = "team/$id"
     fun pick(id: Long, slot: Int) = "team/$id/pick/$slot"
@@ -102,7 +108,14 @@ private fun App(vm: AppViewModel = viewModel()) {
             val id = entry.arguments?.getLong("id") ?: 0L
             TeamEditorScreen(vm, state, id, onBack = back,
                 pickPokemon = { nav.navigate(Routes.pick(id, it)) }, editSlot = { nav.navigate(Routes.slot(id, it)) },
-                analyse = { nav.navigate(Routes.analysis(id)) })
+                analyse = { nav.navigate(Routes.analysis(id)) },
+                speedTier = { nav.navigate(Routes.speed(id)) }, matchup = { nav.navigate(Routes.matchup(id)) })
+        }
+        composable(Routes.SPEED, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+            SpeedTierScreen(vm, state, entry.arguments?.getLong("id") ?: 0L, onBack = back) { nav.navigate(Routes.pokemon(it)) }
+        }
+        composable(Routes.MATCHUP, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+            MatchupScreen(vm, state, entry.arguments?.getLong("id") ?: 0L, onBack = back) { nav.navigate(Routes.pokemon(it)) }
         }
         composable(Routes.ANALYSIS, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
             TeamAnalysisScreen(vm, state, entry.arguments?.getLong("id") ?: 0L, onBack = back) { nav.navigate(Routes.pokemon(it)) }

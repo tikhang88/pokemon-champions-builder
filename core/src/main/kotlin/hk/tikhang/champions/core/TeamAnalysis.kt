@@ -46,6 +46,15 @@ object TeamAnalysisEngine {
         else -> null
     }
 
+    /** Applies a defender's ability (immunities, Thick Fat, Filter…) to a type multiplier. */
+    fun applyDefensiveAbility(m: Double, attackType: String, defAbility: String?): Double {
+        var r = m
+        val a = defAbility?.let(::toId)
+        DEFENSIVE_ABILITY[a]?.get(attackType)?.let { r *= it }
+        if (a in FILTER && r > 1.0) r *= 0.75
+        return r
+    }
+
     /** Multiplier of an attacking type against a defender, including the defender's ability. */
     fun defensiveMultiplier(te: TypeEngine, attackType: String, defTypes: List<String>, defAbility: String?): Double {
         var m = te.multiplier(attackType, defTypes)
@@ -175,13 +184,13 @@ object TeamAnalysisEngine {
 
     data class SynergyEntry(val kind: SynergyKind, val providers: List<Pair<Member, String>>)
 
-    private val SPEED_CONTROL = setOf("tailwind", "trickroom", "icywind", "electroweb", "thunderwave", "scaryface", "bulldoze",
+    val SPEED_CONTROL = setOf("tailwind", "trickroom", "icywind", "electroweb", "thunderwave", "scaryface", "bulldoze",
         "rocktomb", "glare", "nuzzle", "stringshot", "cottonspore", "lowsweep", "mudshot", "bleakwindstorm")
     private val SUPPORT_MOVES = setOf("followme", "ragepowder", "helpinghand", "wideguard", "quickguard", "reflect", "lightscreen",
         "auroraveil", "fakeout", "allyswitch", "coaching", "afteryou", "instruct", "pollenpuff", "lifedew", "healpulse", "decorate",
         "encore", "taunt", "haze", "clearsmog", "safeguard", "spore", "partingshot", "snarl", "faketears", "screech", "psychup")
     private val SUPPORT_ABILITIES = setOf("intimidate", "prankster", "friendguard", "telepathy", "flowerveil", "healer", "hospitality", "commander")
-    private val SETUP = setOf("swordsdance", "nastyplot", "dragondance", "calmmind", "bulkup", "quiverdance", "shellsmash", "bellydrum",
+    val SETUP = setOf("swordsdance", "nastyplot", "dragondance", "calmmind", "bulkup", "quiverdance", "shellsmash", "bellydrum",
         "coil", "shiftgear", "irondefense", "agility", "rockpolish", "curse", "growth", "workup", "tailglow", "victorydance",
         "filletaway", "clangoroussoul", "noretreat", "tidyup", "geomancy", "cosmicpower", "amnesia", "acidarmor", "honeclaws", "howl", "autotomize")
     private val PIVOT = setOf("uturn", "voltswitch", "flipturn", "partingshot", "teleport", "chillyreception", "batonpass", "shedtail")

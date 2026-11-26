@@ -2,11 +2,18 @@
 
 個人用 Android App，用於 Pokémon Champions 的競技資料查閱、隊伍構築及分析。完全離線可用。
 
-目前版本：**V1.2（Phase 3：Team Analysis）**
+目前版本：**V1.3（Phase 4：Coverage Matrix・Speed Tier・Matchup Research）**
 
 ## 功能
 
-### V1.2 新增
+### V1.3 新增
+- **隊伍碼（Replica Team ID）**：每個隊伍可記錄 10 位隊伍碼，可複製。隊伍碼由遊戲伺服器解讀、本身不含隊伍資料，所以 App 不能用隊伍碼直接讀取隊伍。
+- **匯入隊伍文字**：貼上 Pokémon Showdown／PokePaste 格式（Game8、dexdb 等網站提供），支援英文及繁體中文名稱；EV 會按 HOME 規則轉換為 Stat Points；Mega Stone 自動開啟 Mega。匯出文字亦可在 Showdown 匯入。
+- **Coverage Matrix**（隊伍分析內）：屬性｜防守｜攻擊｜備註，點擊查看哪些成員弱／抵抗、哪些成員及招式可攻擊；Mega 即時同步。
+- **Speed Tier**：Regulation 全部 Pokémon（四種配置）＋ 我方實際速度排位；條件：順風、戲法空間、講究圍巾、麻痺、天氣特性、能力等級、輕裝／飛毛腿；與任何 Pokémon 比較；速度摘要（優勢、劣勢、缺口）。
+- **Matchup 研究**：對手隊伍（可建立或匯入）或自選 Pokémon；Matchup Matrix（對手｜威脅｜我方應對），每個評級列出計算依據；最佳防守／進攻應對、速度比較、對手共同弱點、可能策略、先發組合（全部標示為分析建議）。
+
+### V1.2
 - **隊伍分析**（在隊伍頁按「隊伍分析」）：
   - 總覽：屬性分佈、防守／攻擊摘要、物理／特殊／變化分佈、每位成員角色、速度分佈。
   - 防守矩陣：18 種攻擊屬性 × 每位成員的倍率，已計特性（Levitate、Thick Fat、Filter 等）；標示共同弱點、無人抵抗的屬性。
@@ -83,8 +90,8 @@ data/          最新資料快照
 | 1 | Data Foundation、資料匯入 | ✅ V1.0 |
 | 2 | Team Builder、合法性檢查 | ✅ V1.1 |
 | 3 | Team Analysis | ✅ V1.2 |
-| 4 | Coverage Matrix、Speed Tier、Matchup | 下一步 |
-| 5 | Damage Calculator | |
+| 4 | Coverage Matrix、Speed Tier、Matchup | ✅ V1.3 |
+| 5 | Damage Calculator | 下一步 |
 | 6 | Battle Simulator | |
 | 7–8 | 完整離線整合、測試及發佈 | |
 

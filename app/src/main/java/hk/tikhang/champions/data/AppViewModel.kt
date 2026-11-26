@@ -17,6 +17,7 @@ import hk.tikhang.champions.core.TypeEngine
 import kotlinx.coroutines.Dispatchers
 import hk.tikhang.champions.core.BattleFormat
 import hk.tikhang.champions.core.Team
+import hk.tikhang.champions.core.TeamTextImporter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -64,14 +65,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val teamDao = AppDatabase.get(app).teams()
     val teams: StateFlow<List<TeamEntity>> = teamDao.all().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun createTeam(onCreated: (Long) -> Unit) {
+    fun createTeam(opponent: Boolean = false, onCreated: (Long) -> Unit) {
         val reg = _data.value?.regulation?.id ?: return
         viewModelScope.launch {
-            val n = teams.value.size + 1
-            val team = Team(name = "隊伍 $n", regulationId = reg, format = BattleFormat.DOUBLES)
+            val n = teams.value.count { it.team()?.opponent == opponent } + 1
+            val team = Team(name = (if (opponent) "對手隊伍 " else "隊伍 ") + n, regulationId = reg, format = BattleFormat.DOUBLES, opponent = opponent)
             val now = System.currentTimeMillis()
             val id = withContext(Dispatchers.IO) { teamDao.insert(TeamEntity(name = team.name, json = team.toJson(), createdAt = now, updatedAt = now)) }
             onCreated(id)
+        }
+    }
+
+    /** Imports Showdown/PokePaste text as a new team. Returns the import result for display. */
+    fun importTeam(text: String, name: String, code: String, opponent: Boolean, onDone: (TeamTextImporter.Result, Long?) -> Unit) {
+        val st = _data.value ?: return
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.Default) {
+                TeamTextImporter.parse(st.snapshot, text, name.ifBlank { "匯入的隊伍" }, st.regulation.id, code, opponent)
+            }
+            var id: Long? = null
+            if (result.imported > 0) {
+                val now = System.currentTimeMillis()
+                id = withContext(Dispatchers.IO) { teamDao.insert(TeamEntity(name = result.team.name, json = result.team.toJson(), createdAt = now, updatedAt = now)) }
+            }
+            onDone(result, id)
         }
     }
 

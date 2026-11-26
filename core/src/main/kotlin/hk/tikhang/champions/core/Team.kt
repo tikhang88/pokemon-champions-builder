@@ -18,6 +18,10 @@ data class Team(
     /** Always [TEAM_SIZE] entries; null = empty slot. */
     val slots: List<TeamSlot?> = List(TEAM_SIZE) { null },
     val notes: String = "",
+    /** In-game Replica Team ID (10 characters). Kept for reference; it cannot be decoded offline. */
+    val teamCode: String = "",
+    /** True for opponent teams used in Matchup Research. */
+    val opponent: Boolean = false,
 ) {
     val members: List<TeamSlot> get() = slots.filterNotNull()
     fun withSlot(index: Int, slot: TeamSlot?): Team = copy(slots = slots.toMutableList().also { it[index] = slot })
@@ -92,16 +96,19 @@ object TeamEngine {
     fun exportText(s: Snapshot, team: Team): String = buildString {
         appendLine("=== ${team.name} ===")
         appendLine("Regulation ${team.regulationId}・${team.format.zh}")
+        if (team.teamCode.isNotBlank()) appendLine("Team ID: ${team.teamCode}")
         appendLine()
         for (slot in team.members) {
             val sp = species(s, slot) ?: continue
             val item = slot.item?.let { s.itemById[it]?.name ?: it }
             appendLine(sp.name + (item?.let { " @ $it" } ?: ""))
-            effectiveAbility(s, slot)?.let { appendLine("Ability: $it") }
+            // Showdown convention: the out-of-battle ability, even when the Pokémon Mega Evolves.
+            (slot.ability ?: effectiveAbility(s, slot))?.let { appendLine("Ability: $it") }
             slot.megaFormId?.let { s.pokemonById[it]?.name }?.let { appendLine("Mega: $it") }
             appendLine("Level: 50")
             val spText = Stat.entries.filter { slot.spOf(it) > 0 }.joinToString(" / ") { "${slot.spOf(it)} ${SHORT[it]}" }
-            if (spText.isNotEmpty()) appendLine("SPs: $spText")
+            // Showdown's Champions formats read the EVs line as Stat Points.
+            if (spText.isNotEmpty()) appendLine("EVs: $spText")
             s.natures.firstOrNull { it.id == slot.nature }?.let { appendLine("${it.name} Nature") }
             slot.moves.forEach { m -> appendLine("- " + (s.moveById[m]?.name ?: m)) }
             appendLine()

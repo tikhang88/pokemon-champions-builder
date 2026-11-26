@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "2026.11.26-sdc7fa6f1",
+  "generatedAt": "2026-11-26T03:07:25Z",
+  "currentRegulation": "M-C",
+  "nextRegulation": "M-D",
+  "sha256": "44390980d7396e97a23fbf98c5ae398f8eb650968ea0a9eaf25de48fc3c9c306",
+  "bytes": 815805,
+  "file": "champions_data.json",
+  "regulations": [
+    {
+      "id": "M-A",
+      "provisional": false,
+      "verification": "PENDING_VERIFICATION",
+      "teamSelectable": null
+    },
+    {
+      "id": "M-B",
+      "provisional": false,
+      "verification": "COMMUNITY_SOURCE",
+      "teamSelectable": 310
+    },
+    {
+      "id": "M-C",
+      "provisional": false,
+      "verification": "COMMUNITY_SOURCE",
+      "teamSelectable": 345
+    },
+    {
+      "id": "M-D",
+      "provisional": true,
+      "verification": "PENDING_VERIFICATION",
+      "teamSelectable": 354
+    }
+  ],
+  "source": {
+    "commit": "c7fa6f16503de510c319239b5b2d29d4f7abd8c4",
+    "commitDate": "2026-11-25"
+  }
+}

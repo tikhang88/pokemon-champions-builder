@@ -3,6 +3,7 @@ name: Build APK
 on:
   push:
     branches: [main]
+    paths-ignore: ['docs/**', '**.md']
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -30,8 +31,9 @@ jobs:
       - name: Set version
         run: |
           n=$(git rev-list --count HEAD)
+          feature=$(grep '^app.featureVersion=' gradle.properties | cut -d= -f2)
           echo "APP_VERSION_CODE=$n" >> "$GITHUB_ENV"
-          echo "APP_VERSION_NAME=1.0.$n" >> "$GITHUB_ENV"
+          echo "APP_VERSION_NAME=${feature}.$n" >> "$GITHUB_ENV"
 
       - uses: actions/setup-java@v5
         with:

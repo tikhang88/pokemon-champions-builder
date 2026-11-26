@@ -19,7 +19,8 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = (System.getenv("APP_VERSION_CODE") ?: "1").toInt()
-        versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.0-local"
+        versionName = System.getenv("APP_VERSION_NAME") ?: "1.6.0-local"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -45,7 +46,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     androidResources { noCompress += "json" }
 }
 
@@ -63,4 +64,11 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
+
+    // UI tests on an emulator (Phase 8)
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

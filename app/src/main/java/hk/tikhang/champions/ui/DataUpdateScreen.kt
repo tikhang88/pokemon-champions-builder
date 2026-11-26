@@ -35,6 +35,8 @@ import hk.tikhang.champions.core.Issue
 import hk.tikhang.champions.data.AppViewModel
 import hk.tikhang.champions.data.DataState
 import hk.tikhang.champions.data.ImportUi
+import hk.tikhang.champions.data.UpdateUi
+import hk.tikhang.champions.data.AutoUpdate
 import hk.tikhang.champions.data.SnapshotStore
 
 private const val RELEASES_URL = "github.com/tikhang88/pokemon-champions-builder/releases"
@@ -42,6 +44,8 @@ private const val RELEASES_URL = "github.com/tikhang88/pokemon-champions-builder
 @Composable
 fun DataUpdateScreen(vm: AppViewModel, state: DataState, onBack: () -> Unit) {
     val importState by vm.import.collectAsStateWithLifecycle()
+    val updateState by vm.update.collectAsStateWithLifecycle()
+    var autoMode by remember { mutableStateOf(vm.autoUpdate) }
     val online by vm.online.collectAsStateWithLifecycle()
     var confirmReset by remember { mutableStateOf(false) }
     var confirmRevert by remember { mutableStateOf(false) }
@@ -72,6 +76,28 @@ fun DataUpdateScreen(vm: AppViewModel, state: DataState, onBack: () -> Unit) {
                         )
                         Text("請按下方步驟取得新資料。期間 App 會繼續使用 ${state.regulation.id}。", style = MaterialTheme.typography.bodySmall)
                     }
+                }
+            }
+            item {
+                SectionCard("線上更新") {
+                    when (val u = updateState) {
+                        UpdateUi.Idle -> Text(if (vm.lastCheck > 0) "上次檢查：${localTime(vm.lastCheck)}" else "未檢查", style = MaterialTheme.typography.bodySmall)
+                        UpdateUi.Checking -> Text("正在檢查…", style = MaterialTheme.typography.bodySmall)
+                        is UpdateUi.UpToDate -> Text("已是最新（${localTime(u.time)}）", style = MaterialTheme.typography.bodySmall, color = Color(0xFF2E7D32))
+                        is UpdateUi.Failed -> Text(u.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        is UpdateUi.TooOld -> Text("新資料（${u.remote.dataVersion}）需要較新版本的 App，請先到 Releases 更新 App。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        is UpdateUi.Available -> {
+                            Text("有可用更新", style = MaterialTheme.typography.titleSmall, color = Color(0xFF1565C0))
+                            u.summary.forEach { Text("・$it", style = MaterialTheme.typography.bodySmall) }
+                            Button(onClick = { vm.downloadUpdate() }, Modifier.fillMaxWidth()) { Text("下載並預覽更新") }
+                        }
+                    }
+                    OutlinedButton(onClick = { vm.checkOnline(manual = true) }, Modifier.fillMaxWidth(), enabled = online && updateState !is UpdateUi.Checking) {
+                        Text(if (online) "立即檢查更新" else "離線中（連線後可檢查）")
+                    }
+                    Picker("自動更新：${autoMode.zh}", AutoUpdate.entries.toList(), { it.zh }) { autoMode = it; vm.autoUpdate = it }
+                    Text("開啟 App 時如有網絡會自動檢查。下載的資料會先核對 SHA-256 及資料格式，不通過就不會套用；更新後舊資料保存為「上一版本」，可隨時還原。資料檔包含全部 Regulation（約 800 KB），所以每次都是完整下載。",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             item {
@@ -135,7 +161,13 @@ private fun ImportDialog(ui: ImportUi, onConfirm: () -> Unit, onDismiss: () -> U
             text = { CircularProgressIndicator() },
         )
         is ImportUi.Done -> AlertDialog(
-            onDismissRequest = onDismiss, title = { Text(if (ui.success) "完成" else "未能完成") }, text = { Text(ui.message) },
+            onDismissRequest = onDismiss, title = { Text(if (ui.success) "完成" else "未能完成") },
+            text = {
+                Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(ui.message)
+                    ui.details.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+                }
+            },
             confirmButton = { TextButton(onClick = onDismiss) { Text("好") } },
         )
         is ImportUi.Ready -> when (val c = ui.check) {

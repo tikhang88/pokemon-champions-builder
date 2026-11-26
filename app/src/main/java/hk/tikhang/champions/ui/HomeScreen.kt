@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -60,6 +61,7 @@ fun Screen(title: String, onBack: (() -> Unit)?, subtitle: String? = null, conte
 @Composable
 fun HomeScreen(vm: AppViewModel, state: DataState, navigate: (String) -> Unit) {
     val online by vm.online.collectAsStateWithLifecycle()
+    val update by vm.update.collectAsStateWithLifecycle()
     val meta = state.snapshot.meta
     Screen("Pokémon Champion 隊伍模擬器", onBack = null) { pad ->
         LazyColumn(
@@ -75,6 +77,9 @@ fun HomeScreen(vm: AppViewModel, state: DataState, navigate: (String) -> Unit) {
                         Badge(if (online) "在線" else "離線", if (online) Color(0xFF2E7D32) else Color(0xFF757575))
                         Spacer(Modifier.width(6.dp))
                         Badge("離線可用", Color(0xFF1565C0))
+                    }
+                    if (update is hk.tikhang.champions.data.UpdateUi.Available) {
+                        TextButton(onClick = { navigate(Routes.DATA) }) { Text("有可用資料更新 → 查看") }
                     }
                     LabelValue("目前 Regulation", state.regulation.id + if (state.regulationIsManual) "（手動選擇）" else "")
                     LabelValue("資料版本", meta.dataVersion)
@@ -103,18 +108,10 @@ fun HomeScreen(vm: AppViewModel, state: DataState, navigate: (String) -> Unit) {
             item { MenuItem("傷害計算", "Champions 傷害計算器：傷害範圍、KO 機率、生存分析（基本／進階）") { navigate(Routes.calc(0)) } }
             item { MenuItem("Speed Tier 研究", "目前 Regulation 所有 Pokémon 的速度排位、條件（順風・戲法空間・圍巾等）") { navigate(Routes.speed(0)) } }
             item { MenuItem("Regulation", "目前及歷史規則、可用 Pokémon、切換 Regulation") { navigate(Routes.REGULATIONS) } }
-            item { MenuItem("資料更新", "匯入新資料（例如 12 月 2 日的 M-D）、還原、更新紀錄") { navigate(Routes.DATA) } }
+            item { MenuItem("資料更新", "線上檢查更新、自動更新、匯入資料檔（例如 12 月 2 日的 M-D）、還原、更新紀錄") { navigate(Routes.DATA) } }
             item {
-                SectionCard("之後的版本") {
-                    listOf(
-                        "完整離線整合・測試及發佈" to "Phase 7–8",
-                    ).forEach { (name, phase) ->
-                        Row(Modifier.fillMaxWidth()) {
-                            Text(name, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(phase, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-                }
+                Text("App 版本 ${hk.tikhang.champions.BuildConfig.VERSION_NAME}・資料 ${meta.dataVersion}",
+                    Modifier.padding(horizontal = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

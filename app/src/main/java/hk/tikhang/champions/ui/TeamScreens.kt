@@ -204,6 +204,16 @@ fun TeamEditorScreen(
                     if (team.opponent) Text("這是對手隊伍，用於 Matchup 研究。", style = MaterialTheme.typography.bodySmall, color = Color(0xFF6D4C41))
                 }
             }
+            hk.tikhang.champions.core.TeamImpact.outdatedRegulation(s, team, java.time.Instant.now())?.let { cur ->
+                item {
+                    SectionCard {
+                        Text("此隊伍使用 ${team.regulationId}（已結束）。目前是 ${cur.id}。", color = Color(0xFFB26A00), style = MaterialTheme.typography.bodyMedium)
+                        val after = LegalityEngine.check(s, team.copy(regulationId = cur.id))
+                        Text("改用 ${cur.id} 後：${after.result.zh}", style = MaterialTheme.typography.bodySmall)
+                        OutlinedButton(onClick = { save(team.copy(regulationId = cur.id)) }) { Text("改用 ${cur.id}") }
+                    }
+                }
+            }
             item { LegalityCard(report) }
             item { Column {
                 androidx.compose.material3.Button(onClick = analyse, Modifier.fillMaxWidth(), enabled = team.members.isNotEmpty()) {

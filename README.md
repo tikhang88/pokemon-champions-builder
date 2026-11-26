@@ -2,9 +2,18 @@
 
 個人用 Android App，用於 Pokémon Champions 的競技資料查閱、隊伍構築及分析。完全離線可用。
 
-目前版本：**V1.5（Phase 6：Battle Simulator）**
+目前版本：**V1.6（Phase 7–8：線上更新、完整測試及發佈）**
+
+文件：[使用說明](docs/User_Guide.md)・[測試報告](docs/Testing_Report.md)・[已知問題](docs/Known_Issues.md)・[更新紀錄](CHANGELOG.md)
 
 ## 功能
+
+### V1.6 新增
+- **線上資料更新**（資料更新頁）：「立即檢查更新」會讀取本 repository 的 `data/version.json`；有新資料時列出內容（資料版本、Regulation、名單狀態），按「下載並預覽更新」→ 核對 SHA-256 → 資料檢查 → Change Log → 確認後套用。
+- **自動更新**：關閉／自動檢查並提示（預設）／自動下載並套用。開啟 App 時如有網絡會檢查，主頁會顯示「有可用資料更新」。離線時一切照常使用。
+- **更新後的隊伍影響**：更新或匯入資料後列出受影響的隊伍（合法 → 不合法等，及新問題）；Regulation 改變時會提示。舊隊伍一律保留。
+- **舊 Regulation 提示**：隊伍仍設定為已結束的 Regulation 時，隊伍頁會顯示提示、改用目前 Regulation 後的合法性，及一按切換。
+- 新增測試：資料完整性、Regulation 日期／名單、更新檢查、效能，以及模擬器上的 UI 測試（見測試報告）。
 
 ### V1.5 新增
 - **對戰模擬**（隊伍頁「對戰模擬」）：選對手隊伍（對手隊伍或自己其他隊伍）、單打／雙打、按次序選出戰成員（首 1／2 隻先發）。
@@ -59,8 +68,8 @@
 
 ## 安裝
 
-1. 打開 [Releases](../../releases)，找最新的 **App V1.0.x**。
-2. 用手機下載 `PokemonChampions-v1.0.x.apk` 並安裝（需要允許「安裝未知來源的應用程式」）。
+1. 打開 [Releases](../../releases)，找最新的 **App V1.6.x**（舊版為 V1.0.x）。
+2. 用手機下載 `PokemonChampions-v1.6.x.apk` 並安裝（需要允許「安裝未知來源的應用程式」）。已安裝舊版可直接覆蓋，隊伍會保留。
 
 ## 12 月 2 日匯入 M-D 資料
 
@@ -70,7 +79,9 @@
 2. 如果 Champions 資料有改變（例如加入 M-D 名單）：
    - 發佈「**資料更新**」release，附 `champions_data.json`；
    - 同時建置一個內置新資料的 APK。
-3. 在 App：**資料更新 → 選擇資料檔並匯入**，選下載的 `champions_data.json`。
+   - 更新 `data/version.json`，App 的線上更新會讀取。
+3. 在 App：**資料更新 → 立即檢查更新 → 下載並預覽更新**（或開啟 App 時自動提示）。
+   亦可手動：**選擇資料檔並匯入**，選下載的 `champions_data.json`。
 
 想立即更新：GitHub → **Actions → Update data → Run workflow**。
 
@@ -89,8 +100,9 @@
 core/          純 Kotlin 引擎（能力值、屬性相性、Regulation、資料驗證、Change Log）＋ Unit Tests
 app/           Android App（Jetpack Compose）；app/src/main/assets/champions_data.json 為內置資料
 tools/data/    資料產生工具（build_snapshot.py、extract.mjs、regulations_meta.json）
-data/          最新資料快照
-.github/       Build APK、Update data workflows
+data/          最新資料快照及 version.json（App 線上更新讀取）
+docs/          研究報告、使用說明、測試報告、已知問題
+.github/       Build APK、Update data、UI tests workflows
 ```
 
 新 Regulation 的日期／公告寫在 `tools/data/regulations_meta.json`；Pokémon 名單會由 Showdown 自動讀取。
@@ -110,6 +122,7 @@ data/          最新資料快照
 | 4 | Coverage Matrix、Speed Tier、Matchup | ✅ V1.3 |
 | 5 | Damage Calculator | ✅ V1.4 |
 | 6 | Battle Simulator | ✅ V1.5 |
-| 7–8 | 完整離線整合、測試及發佈 | 下一步 |
+| 7 | 完整離線整合、線上更新 | ✅ V1.6 |
+| 8 | 測試及發佈 | ✅ V1.6 |
 
 Pokémon 及相關名稱為 Nintendo、Creatures、GAME FREAK、The Pokémon Company 的商標。本 App 為非官方個人工具，不包含官方圖像。

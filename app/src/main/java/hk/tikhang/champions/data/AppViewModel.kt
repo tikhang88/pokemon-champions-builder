@@ -18,6 +18,11 @@ import kotlinx.coroutines.Dispatchers
 import hk.tikhang.champions.core.BattleFormat
 import hk.tikhang.champions.core.Team
 import hk.tikhang.champions.core.TeamTextImporter
+import hk.tikhang.champions.core.RemoteVersion
+import hk.tikhang.champions.core.SnapshotImporter
+import hk.tikhang.champions.core.TeamImpact
+import hk.tikhang.champions.core.UpdatePolicy
+import hk.tikhang.champions.core.UpdateStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -42,8 +47,20 @@ sealed class ImportUi {
     data object Idle : ImportUi()
     data object Checking : ImportUi()
     data class Ready(val check: ImportCheck, val bytes: ByteArray?, val fileName: String?) : ImportUi()
-    data class Done(val message: String, val success: Boolean) : ImportUi()
+    data class Done(val message: String, val success: Boolean, val details: List<String> = emptyList()) : ImportUi()
 }
+
+/** Online update check state (spec §14.4 Offline Status: Online / Offline / Data Available / Update Available). */
+sealed class UpdateUi {
+    data object Idle : UpdateUi()
+    data object Checking : UpdateUi()
+    data class UpToDate(val time: Long) : UpdateUi()
+    data class Available(val remote: RemoteVersion, val summary: List<String>) : UpdateUi()
+    data class TooOld(val remote: RemoteVersion) : UpdateUi()
+    data class Failed(val message: String) : UpdateUi()
+}
+
+enum class AutoUpdate(val zh: String) { OFF("關閉"), CHECK("自動檢查並提示"), APPLY("自動下載並套用") }
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val store = SnapshotStore(app)
@@ -57,6 +74,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _import = MutableStateFlow<ImportUi>(ImportUi.Idle)
     val import: StateFlow<ImportUi> = _import.asStateFlow()
+
+    private val _update = MutableStateFlow<UpdateUi>(UpdateUi.Idle)
+    val update: StateFlow<UpdateUi> = _update.asStateFlow()
+
+    var autoUpdate: AutoUpdate
+        get() = runCatching { AutoUpdate.valueOf(prefs.getString(KEY_AUTO, AutoUpdate.CHECK.name)!!) }.getOrDefault(AutoUpdate.CHECK)
+        set(v) { prefs.edit().putString(KEY_AUTO, v.name).apply() }
+    val lastCheck: Long get() = prefs.getLong(KEY_LAST_CHECK, 0L)
 
     private val _startupWarning = MutableStateFlow<String?>(null)
     val startupWarning: StateFlow<String?> = _startupWarning.asStateFlow()
@@ -117,15 +142,57 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun history() = store.history()
 
     init {
-        reload()
+        reload(autoCheck = true)
         watchNetwork()
     }
 
-    private fun reload() {
+    private fun reload(autoCheck: Boolean = false) {
         viewModelScope.launch {
             val loaded = withContext(Dispatchers.IO) { store.load() }
             loaded.warning?.let { _startupWarning.value = it }
             _data.value = buildState(loaded)
+            // Automatic update on start (spec §4.4): only when online; offline use is unaffected.
+            if (autoCheck && autoUpdate != AutoUpdate.OFF && _online.value) checkOnline(manual = false)
+        }
+    }
+
+    /** Check GitHub for newer data. Manual checks report every result; automatic ones stay quiet unless there is news. */
+    fun checkOnline(manual: Boolean = true) {
+        val current = _data.value?.snapshot ?: return
+        if (!_online.value) { if (manual) _update.value = UpdateUi.Failed("目前離線，未能檢查更新。所有功能仍可離線使用。"); return }
+        _update.value = UpdateUi.Checking
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { OnlineUpdater.fetchVersion() } }
+            prefs.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
+            val remote = result.getOrElse { e ->
+                _update.value = if (manual) UpdateUi.Failed("檢查失敗：${e.message ?: e.javaClass.simpleName}") else UpdateUi.Idle
+                return@launch
+            }
+            when (UpdatePolicy.status(current.meta, remote)) {
+                UpdateStatus.UP_TO_DATE -> _update.value = UpdateUi.UpToDate(System.currentTimeMillis())
+                UpdateStatus.APP_TOO_OLD -> _update.value = UpdateUi.TooOld(remote)
+                UpdateStatus.AVAILABLE -> {
+                    _update.value = UpdateUi.Available(remote, UpdatePolicy.describe(current, remote))
+                    if (!manual && autoUpdate == AutoUpdate.APPLY) downloadUpdate(autoApply = true)
+                }
+            }
+        }
+    }
+
+    /** Download the available update, verify it, then preview it (or apply it directly when [autoApply]). */
+    fun downloadUpdate(autoApply: Boolean = false) {
+        val avail = _update.value as? UpdateUi.Available ?: return
+        if (!autoApply) _import.value = ImportUi.Checking
+        viewModelScope.launch {
+            val bytes = withContext(Dispatchers.IO) { runCatching { OnlineUpdater.fetchSnapshot(avail.remote) } }.getOrElse { e ->
+                _import.value = ImportUi.Done("下載失敗，原有資料保持不變：${e.message}", false); return@launch
+            }
+            val check = withContext(Dispatchers.Default) { SnapshotImporter.check(bytes, _data.value?.snapshot) }
+            _import.value = ImportUi.Ready(check, bytes, "線上更新 ${avail.remote.dataVersion}")
+            if (autoApply) {
+                if ((check as? ImportCheck.Ok)?.canImport == true) confirmImport()
+                else _import.value = ImportUi.Done("自動更新未套用：資料檢查不通過，原有資料保持不變", false)
+            }
         }
     }
 
@@ -163,11 +230,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val ready = _import.value as? ImportUi.Ready ?: return
         val ok = ready.check as? ImportCheck.Ok ?: return
         val bytes = ready.bytes ?: return
+        val old = _data.value?.snapshot
         viewModelScope.launch {
             val err = withContext(Dispatchers.IO) { store.commit(bytes, ok, ready.fileName) }
             if (err == null) {
                 _data.value = buildState(SnapshotStore.Loaded(ok.snapshot, SnapshotStore.Origin.IMPORTED, ok.sha256))
-                _import.value = ImportUi.Done("已匯入資料版本 ${ok.snapshot.meta.dataVersion}", true)
+                if (_update.value is UpdateUi.Available) _update.value = UpdateUi.UpToDate(System.currentTimeMillis())
+                // Spec §4.5: keep old teams, show which are affected by the new data.
+                val details = mutableListOf<String>()
+                ok.changes?.let { details += it.summary().lines() }
+                if (old != null) {
+                    if (old.meta.currentRegulation != ok.snapshot.meta.currentRegulation)
+                        details += "Regulation 已更新：${old.meta.currentRegulation} → ${ok.snapshot.meta.currentRegulation}。舊隊伍保留原有 Regulation，可在隊伍頁切換。"
+                    val impact = withContext(Dispatchers.Default) { TeamImpact.compute(old, ok.snapshot, teams.value.mapNotNull { it.team() }) }
+                    details += if (impact.isEmpty()) "已儲存的隊伍沒有受影響" else listOf("受影響的隊伍：") + impact.map { "・" + it.text() }
+                }
+                _import.value = ImportUi.Done("已匯入資料版本 ${ok.snapshot.meta.dataVersion}", true, details)
             } else {
                 _import.value = ImportUi.Done(err, false)
             }
@@ -218,5 +296,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
         private const val KEY_REGULATION = "regulation"
+        private const val KEY_AUTO = "auto_update"
+        private const val KEY_LAST_CHECK = "last_update_check"
     }
 }

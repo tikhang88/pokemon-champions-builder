@@ -243,7 +243,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     if (old.meta.currentRegulation != ok.snapshot.meta.currentRegulation)
                         details += "Regulation 已更新：${old.meta.currentRegulation} → ${ok.snapshot.meta.currentRegulation}。舊隊伍保留原有 Regulation，可在隊伍頁切換。"
                     val impact = withContext(Dispatchers.Default) { TeamImpact.compute(old, ok.snapshot, teams.value.mapNotNull { it.team() }) }
-                    details += if (impact.isEmpty()) "已儲存的隊伍沒有受影響" else listOf("受影響的隊伍：") + impact.map { "・" + it.text() }
+                    if (impact.isEmpty()) details.add("已儲存的隊伍沒有受影響")
+                    else { details.add("受影響的隊伍："); impact.forEach { details.add("・" + it.text()) } }
                 }
                 _import.value = ImportUi.Done("已匯入資料版本 ${ok.snapshot.meta.dataVersion}", true, details)
             } else {

@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.background
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +40,8 @@ import hk.tikhang.champions.core.LegalityEngine
 import hk.tikhang.champions.core.MAX_MOVES
 import hk.tikhang.champions.core.Move
 import hk.tikhang.champions.core.RegulationEngine
+import hk.tikhang.champions.core.ItemGroups
+import hk.tikhang.champions.core.MoveGroups
 import hk.tikhang.champions.core.Stat
 import hk.tikhang.champions.core.StatsEngine
 import hk.tikhang.champions.core.TeamEngine
@@ -153,7 +156,7 @@ fun SlotEditorScreen(vm: AppViewModel, state: DataState, teamId: Long, index: In
         }
     }
 
-    if (itemPicker) ItemPickerDialog(state, onPick = { id -> update { it.copy(item = id) }; itemPicker = false }) { itemPicker = false }
+    if (itemPicker) ItemPickerDialog(state, speciesId = species.id, onPick = { id -> update { it.copy(item = id) }; itemPicker = false }) { itemPicker = false }
     movePickerFor?.let { i ->
         MovePickerDialog(state, species.id, exclude = slot.moves.toSet(), onPick = { id ->
             update { sl -> sl.copy(moves = if (i < sl.moves.size) sl.moves.mapIndexed { j, mv -> if (j == i) id else mv } else (sl.moves + id).take(MAX_MOVES)) }
@@ -246,22 +249,36 @@ private fun SearchDialog(title: String, onDismiss: () -> Unit, content: @Composa
 }
 
 @Composable
-fun ItemPickerDialog(state: DataState, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
+fun ItemPickerDialog(state: DataState, speciesId: String? = null, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
     val s = state.snapshot
+    val baseId = speciesId?.let { s.pokemonById[it]?.baseId ?: it }
     SearchDialog("選擇道具", onDismiss) { q ->
-        val list = remember(q) {
-            s.items.filter { q.isEmpty() || it.name.contains(q, true) || it.nameZh?.contains(q) == true }
-                .sortedWith(compareBy({ it.isMegaStone }, { it.nameZh ?: it.name }))
+        val groups = remember(q) {
+            ItemGroups.grouped(s, s.items.filter { q.isEmpty() || it.name.contains(q, true) || it.nameZh?.contains(q) == true }, baseId)
         }
         LazyColumn {
             item { Text("沒有道具", Modifier.fillMaxWidth().clickable { onPick(null) }.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.primary) }
-            items(list, key = { it.id }) { entry ->
+            groups.forEach { (g, list) ->
+                item(key = "h-" + g.name) { PickerHeader(g.zh, list.size) }
+                items(list, key = { it.id }) { entry ->
                 Column(Modifier.fillMaxWidth().clickable { onPick(entry.id) }.padding(vertical = 8.dp)) {
                     Text((entry.nameZh ?: entry.name) + if (entry.nameZh != null) "（${entry.name}）" else "", style = MaterialTheme.typography.bodyMedium)
                     (entry.shortDescZh ?: entry.shortDesc)?.let { d -> Text(d, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun PickerHeader(title: String, count: Int, type: String? = null) {
+    Row(
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (type != null) TypeChip(type)
+        Text(if (type != null) "$count 個招式" else "$title（$count）", style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -274,20 +291,23 @@ fun MovePickerDialog(state: DataState, speciesId: String, exclude: Set<String>, 
     val upcoming = remember(speciesId) { RegulationEngine.upcomingNewMoves(s, speciesId, now).map { it.second }.toSet() + RegulationEngine.upcomingNewMoves(s, p?.baseId ?: "", now).map { it.second } }
     SearchDialog("選擇招式（${learnset.size}）", onDismiss) { q ->
         val qid = toId(q)
-        val list = remember(q) {
-            learnset.mapNotNull { s.moveById[it] }.filter { it.id !in exclude }
+        val groups = remember(q) {
+            val list = learnset.mapNotNull { s.moveById[it] }.filter { it.id !in exclude }
                 .filter { q.isEmpty() || it.nameZh?.contains(q) == true || toId(it.name).contains(qid) || (TypeZh[it.type] ?: "").contains(q) }
-                .sortedWith(compareBy({ it.category == "Status" }, { it.type }, { -it.basePower }))
+            MoveGroups.grouped(s, list, p?.types.orEmpty())
         }
         LazyColumn {
             if (upcoming.isNotEmpty()) item {
                 Text("12 月 2 日起新增（未可選）：" + upcoming.joinToString("、") { id -> s.moveById[id]?.let { it.nameZh ?: it.name } ?: id },
                     style = MaterialTheme.typography.bodySmall, color = Color(0xFFB26A00))
             }
-            items(list, key = { it.id }) { m ->
-                Column(Modifier.fillMaxWidth().clickable { onPick(m.id) }.padding(vertical = 8.dp)) {
-                    Text((m.nameZh ?: m.name) + "（${m.name}）", style = MaterialTheme.typography.bodyMedium)
-                    MoveSummary(m)
+            groups.forEach { (type, list) ->
+                item(key = "h-$type") { PickerHeader(TypeZh[type] ?: type, list.size, type) }
+                items(list, key = { it.id }) { m ->
+                    Column(Modifier.fillMaxWidth().clickable { onPick(m.id) }.padding(vertical = 8.dp)) {
+                        Text((m.nameZh ?: m.name) + "（${m.name}）", style = MaterialTheme.typography.bodyMedium)
+                        MoveSummary(m)
+                    }
                 }
             }
         }

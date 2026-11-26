@@ -59,6 +59,12 @@ class SmokeTest {
         waitFor("隻")
     }
 
+    @Test fun speedLinesOpens() {
+        openFromHome("速度線")
+        waitFor("顯示的速度線")
+        waitFor("極速")
+    }
+
     @Test fun dataScreenShowsOnlineUpdate() {
         openFromHome("資料更新")
         waitFor("線上更新")

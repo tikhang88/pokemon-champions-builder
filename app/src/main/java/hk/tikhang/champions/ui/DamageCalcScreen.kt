@@ -155,7 +155,7 @@ fun DamageCalcScreen(vm: AppViewModel, state: DataState, teamId: Long, onBack: (
         MovePickerDialog(state, a.slot.speciesId, exclude = emptySet(), onPick = { moveId = it; movePicker = false }) { movePicker = false }
     }
     itemPickerFor?.let { which ->
-        ItemPickerDialog(state, onPick = { id ->
+        ItemPickerDialog(state, speciesId = (if (which == "atk") attacker else defender)?.slot?.speciesId, onPick = { id ->
             if (which == "atk") attacker = attacker?.let { it.copy(slot = it.slot.copy(item = id)) } else defender = defender?.let { it.copy(slot = it.slot.copy(item = id)) }
             itemPickerFor = null
         }) { itemPickerFor = null }

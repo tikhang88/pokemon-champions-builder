@@ -168,7 +168,7 @@ fun shareText(context: android.content.Context, title: String, text: String) {
 fun TeamEditorScreen(
     vm: AppViewModel, state: DataState, teamId: Long, onBack: () -> Unit,
     pickPokemon: (slot: Int) -> Unit, editSlot: (slot: Int) -> Unit, analyse: () -> Unit,
-    speedTier: () -> Unit = {}, matchup: () -> Unit = {}, damage: () -> Unit = {}, battle: () -> Unit = {},
+    speedTier: () -> Unit = {}, speedLines: () -> Unit = {}, matchup: () -> Unit = {}, damage: () -> Unit = {}, battle: () -> Unit = {},
 ) {
     val teams by vm.teams.collectAsStateWithLifecycle()
     val entity = teams.firstOrNull { it.id == teamId }
@@ -221,11 +221,14 @@ fun TeamEditorScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
                     OutlinedButton(onClick = speedTier, Modifier.weight(1f), enabled = team.members.isNotEmpty()) { Text("Speed Tier") }
-                    if (!team.opponent) OutlinedButton(onClick = matchup, Modifier.weight(1f), enabled = team.members.isNotEmpty()) { Text("Matchup 研究") }
+                    OutlinedButton(onClick = speedLines, Modifier.weight(1f), enabled = team.members.isNotEmpty()) { Text("速度線") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    if (!team.opponent) OutlinedButton(onClick = matchup, Modifier.weight(1f), enabled = team.members.isNotEmpty()) { Text("Matchup 研究") }
                     OutlinedButton(onClick = damage, Modifier.weight(1f), enabled = team.members.isNotEmpty()) { Text("傷害計算") }
-                    if (!team.opponent) OutlinedButton(onClick = battle, Modifier.weight(1f), enabled = team.members.isNotEmpty()) { Text("對戰模擬") }
+                }
+                if (!team.opponent) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    OutlinedButton(onClick = battle, Modifier.weight(1f), enabled = team.members.isNotEmpty()) { Text("對戰模擬") }
                 }
             }
             }

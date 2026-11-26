@@ -107,6 +107,7 @@ fun HomeScreen(vm: AppViewModel, state: DataState, navigate: (String) -> Unit) {
             item { MenuItem("Pokémon 圖鑑", "搜尋、篩選、能力值、招式、Mega 比較") { navigate(Routes.POKEDEX) } }
             item { MenuItem("傷害計算", "Champions 傷害計算器：傷害範圍、KO 機率、生存分析（基本／進階）") { navigate(Routes.calc(0)) } }
             item { MenuItem("Speed Tier 研究", "目前 Regulation 所有 Pokémon 的速度排位、條件（順風・戲法空間・圍巾等）") { navigate(Routes.speed(0)) } }
+            item { MenuItem("速度線", "每隻 Pokémon 的極速、圍巾、+1、順風、天氣特性 ×2 等速度，比較出手次序") { navigate(Routes.speedLines(0)) } }
             item { MenuItem("Regulation", "目前及歷史規則、可用 Pokémon、切換 Regulation") { navigate(Routes.REGULATIONS) } }
             item { MenuItem("資料更新", "線上檢查更新、自動更新、匯入資料檔（例如 12 月 2 日的 M-D）、還原、更新紀錄") { navigate(Routes.DATA) } }
             item {

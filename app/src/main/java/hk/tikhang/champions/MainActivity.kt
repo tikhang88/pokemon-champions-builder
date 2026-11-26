@@ -33,6 +33,7 @@ import hk.tikhang.champions.ui.RegulationListScreen
 import hk.tikhang.champions.ui.SlotEditorScreen
 import hk.tikhang.champions.ui.TeamAnalysisScreen
 import hk.tikhang.champions.ui.SpeedTierScreen
+import hk.tikhang.champions.ui.SpeedLinesScreen
 import hk.tikhang.champions.ui.DamageCalcScreen
 import hk.tikhang.champions.ui.BattleSimScreen
 import hk.tikhang.champions.ui.MatchupScreen
@@ -65,12 +66,14 @@ object Routes {
     const val SLOT = "team/{id}/slot/{slot}"
     const val ANALYSIS = "team/{id}/analysis"
     const val SPEED = "speed/{id}"
+    const val SPEED_LINES = "speedlines/{id}"
     const val CALC = "calc/{id}"
     const val BATTLE = "team/{id}/battle"
     fun battle(id: Long) = "team/$id/battle"
     fun calc(id: Long) = "calc/$id"
     const val MATCHUP = "team/{id}/matchup"
     fun speed(id: Long) = "speed/$id"
+    fun speedLines(id: Long) = "speedlines/$id"
     fun matchup(id: Long) = "team/$id/matchup"
     fun analysis(id: Long) = "team/$id/analysis"
     fun team(id: Long) = "team/$id"
@@ -115,7 +118,7 @@ private fun App(vm: AppViewModel = viewModel()) {
             TeamEditorScreen(vm, state, id, onBack = back,
                 pickPokemon = { nav.navigate(Routes.pick(id, it)) }, editSlot = { nav.navigate(Routes.slot(id, it)) },
                 analyse = { nav.navigate(Routes.analysis(id)) },
-                speedTier = { nav.navigate(Routes.speed(id)) }, matchup = { nav.navigate(Routes.matchup(id)) },
+                speedTier = { nav.navigate(Routes.speed(id)) }, speedLines = { nav.navigate(Routes.speedLines(id)) }, matchup = { nav.navigate(Routes.matchup(id)) },
                 damage = { nav.navigate(Routes.calc(id)) }, battle = { nav.navigate(Routes.battle(id)) })
         }
         composable(Routes.BATTLE, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
@@ -126,6 +129,9 @@ private fun App(vm: AppViewModel = viewModel()) {
         }
         composable(Routes.SPEED, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
             SpeedTierScreen(vm, state, entry.arguments?.getLong("id") ?: 0L, onBack = back) { nav.navigate(Routes.pokemon(it)) }
+        }
+        composable(Routes.SPEED_LINES, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+            SpeedLinesScreen(vm, state, entry.arguments?.getLong("id") ?: 0L, onBack = back) { nav.navigate(Routes.pokemon(it)) }
         }
         composable(Routes.MATCHUP, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
             MatchupScreen(vm, state, entry.arguments?.getLong("id") ?: 0L, onBack = back) { nav.navigate(Routes.pokemon(it)) }

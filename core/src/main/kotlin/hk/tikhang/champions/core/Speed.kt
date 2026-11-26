@@ -137,3 +137,81 @@ object SpeedEngine {
         return Summary(speeds.maxByOrNull { it.second }, speeds.minByOrNull { it.second }, fast, slow, control, adv, dis, gaps)
     }
 }
+
+/**
+ * Speed lines (速度線): the common Speed benchmarks of each Pokémon — investment, Choice Scarf,
+ * +1 / +2 / −1 stages, Tailwind and ×2 abilities (weather, terrain, Unburden). Comparing a speed
+ * against these lines shows which turn orders are possible. Same rounding as [SpeedEngine.effective].
+ */
+object SpeedLineEngine {
+    enum class Line(val zh: String, val detail: String) {
+        PLUS2("極速 +2", "高速移動、岩石打磨等 +2"),
+        TAILWIND("極速＋順風", "順風 ×2"),
+        ABILITY("極速＋特性", "天氣／場地／輕裝 ×2、飛毛腿 ×1.5"),
+        SCARF("極速＋圍巾", "講究圍巾 ×1.5"),
+        PLUS1("極速 +1", "龍之舞、蝶舞、加速特性等 +1"),
+        MAX_PLUS("極速", "32 SP＋提升速度的性格"),
+        MAX("準速", "32 SP，性格不影響速度"),
+        NEUTRAL("無投資", "0 SP，性格不影響速度"),
+        MINUS1("極速 −1", "被冰凍之風、電網等降低速度"),
+        MIN("最慢", "0 SP＋降低速度的性格（戲法空間用）"),
+    }
+
+    val DEFAULT_LINES: Set<Line> = setOf(Line.MAX_PLUS, Line.MAX, Line.SCARF, Line.PLUS1, Line.TAILWIND, Line.ABILITY)
+
+    /** Abilities that boost Speed under a condition: multiplier and the condition in Chinese. */
+    val SPEED_ABILITIES: Map<String, Pair<Double, String>> = mapOf(
+        "swiftswim" to (2.0 to "下雨"), "chlorophyll" to (2.0 to "晴天"), "sandrush" to (2.0 to "沙暴"),
+        "slushrush" to (2.0 to "下雪"), "surgesurfer" to (2.0 to "電氣場地"), "unburden" to (2.0 to "道具用後"),
+        "quickfeet" to (1.5 to "異常狀態"),
+    )
+
+    data class Entry(val pokemon: Pokemon, val line: Line, val speed: Int, val note: String? = null)
+
+    /** Conditions under which [abilityId]'s Speed boost applies (weather, or the trigger). */
+    fun abilityConditions(abilityId: String): SpeedEngine.Conditions = when (abilityId) {
+        "swiftswim" -> SpeedEngine.Conditions(weather = SpeedEngine.Weather.RAIN)
+        "chlorophyll" -> SpeedEngine.Conditions(weather = SpeedEngine.Weather.SUN)
+        "sandrush" -> SpeedEngine.Conditions(weather = SpeedEngine.Weather.SAND)
+        "slushrush" -> SpeedEngine.Conditions(weather = SpeedEngine.Weather.SNOW)
+        else -> SpeedEngine.Conditions(abilityActive = true)
+    }
+
+    /** Every line of one Pokémon. [abilityName] turns an ability id into a display name. */
+    fun linesOf(p: Pokemon, abilityName: (String) -> String = { it }): List<Entry> {
+        val base = p.baseStats.spe
+        val maxPlus = SpeedEngine.benchmark(base, SpeedEngine.Spread.MAX_PLUS)
+        fun eff(c: SpeedEngine.Conditions, ability: String? = null) = SpeedEngine.effective(maxPlus, ability, c)
+        val out = mutableListOf(
+            Entry(p, Line.PLUS2, eff(SpeedEngine.Conditions(stage = 2))),
+            Entry(p, Line.TAILWIND, eff(SpeedEngine.Conditions(tailwind = true))),
+            Entry(p, Line.SCARF, eff(SpeedEngine.Conditions(choiceScarf = true))),
+            Entry(p, Line.PLUS1, eff(SpeedEngine.Conditions(stage = 1))),
+            Entry(p, Line.MAX_PLUS, maxPlus),
+            Entry(p, Line.MAX, SpeedEngine.benchmark(base, SpeedEngine.Spread.MAX)),
+            Entry(p, Line.NEUTRAL, SpeedEngine.benchmark(base, SpeedEngine.Spread.NEUTRAL)),
+            Entry(p, Line.MINUS1, eff(SpeedEngine.Conditions(stage = -1))),
+            Entry(p, Line.MIN, SpeedEngine.benchmark(base, SpeedEngine.Spread.MIN)),
+        )
+        p.abilities.map(::toId).distinct().filter { it in SPEED_ABILITIES }.forEach { a ->
+            val (_, cond) = SPEED_ABILITIES.getValue(a)
+            out += Entry(p, Line.ABILITY, eff(abilityConditions(a), a), "${abilityName(a)}・$cond")
+        }
+        return out
+    }
+
+    /** All lines of [pool] for [lines], fastest first (slowest first under Trick Room). */
+    fun lines(pool: List<Pokemon>, lines: Set<Line>, trickRoom: Boolean = false, abilityName: (String) -> String = { it }): List<Entry> {
+        val all = pool.flatMap { p -> linesOf(p, abilityName).filter { it.line in lines } }
+        return if (trickRoom) all.sortedWith(compareBy({ it.speed }, { it.pokemon.num }))
+        else all.sortedWith(compareBy({ -it.speed }, { it.pokemon.num }))
+    }
+
+    data class Comparison(val faster: Int, val ties: Int, val slower: Int) {
+        val total: Int get() = faster + ties + slower
+    }
+
+    /** How [speed] compares with [entries]: lines it outspeeds, speed ties (50%), lines faster than it. */
+    fun compare(speed: Int, entries: List<Entry>): Comparison =
+        Comparison(entries.count { speed > it.speed }, entries.count { speed == it.speed }, entries.count { speed < it.speed })
+}

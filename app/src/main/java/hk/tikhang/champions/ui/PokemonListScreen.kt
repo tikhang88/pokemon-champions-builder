@@ -34,6 +34,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import hk.tikhang.champions.core.Pokemon
 import hk.tikhang.champions.core.Regulation
 import hk.tikhang.champions.core.Verification
@@ -89,8 +98,8 @@ fun PokemonListScreen(
                     label = { Text("搜尋名稱、編號或特性") }, modifier = Modifier.fillMaxWidth(),
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Picker("屬性：" + (type?.let { TypeZh[it] } ?: "全部"), listOf<String?>(null) + s.types, { it?.let { t -> TypeZh[t] } ?: "全部屬性" }) { type = it }
-                    Picker("第二屬性：" + (type2?.let { TypeZh[it] } ?: "全部"), listOf<String?>(null) + s.types, { it?.let { t -> TypeZh[t] } ?: "全部屬性" }) { type2 = it }
+                    TypePicker("屬性：" + (type?.let { TypeZh[it] } ?: "全部"), s.types, type) { type = it }
+                    TypePicker("第二屬性：" + (type2?.let { TypeZh[it] } ?: "全部"), s.types, type2) { type2 = it }
                     Picker("排序：${sort.zh}", SortBy.entries.toList(), { it.zh }) { sort = it }
                     if (!pickMode) {
                         FilterChip(selected = showMega && !megaOnly, onClick = { showMega = !showMega; megaOnly = false }, label = { Text("包括 Mega") })
@@ -122,10 +131,45 @@ fun <T> Picker(label: String, options: List<T>, text: (T) -> String, onPick: (T)
     var open by remember { mutableStateOf(false) }
     Box {
         OutlinedButton(onClick = { open = true }) { Text(label) }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        // Capped height: long lists scroll inside the menu instead of running under the system bars.
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.heightIn(max = 360.dp)) {
             options.forEach { o -> DropdownMenuItem(text = { Text(text(o)) }, onClick = { onPick(o); open = false }) }
         }
     }
+}
+
+/** Type filter: a compact grid of the 18 type chips in a dialog (fits on one screen). */
+@Composable
+fun TypePicker(label: String, types: List<String>, current: String?, onPick: (String?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    OutlinedButton(onClick = { open = true }) { Text(label) }
+    if (open) AlertDialog(
+        onDismissRequest = { open = false },
+        title = { Text("選擇屬性") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                types.chunked(3).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { t ->
+                            Box(
+                                Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
+                                    .background(TypeColors[t] ?: Color.Gray)
+                                    .then(if (t == current) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(8.dp)) else Modifier)
+                                    .clickable { onPick(t); open = false }.padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                val dark = t in setOf("Electric", "Ice", "Normal", "Rock", "Flying", "Bug", "Fairy")
+                                Text(TypeZh[t] ?: t, color = if (dark) Color(0xFF1A1A1A) else Color.White, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onPick(null); open = false }) { Text("全部屬性") } },
+        dismissButton = { TextButton(onClick = { open = false }) { Text("取消") } },
+    )
 }
 
 @Composable

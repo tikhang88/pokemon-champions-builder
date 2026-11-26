@@ -1,0 +1,33 @@
+{
+  "_comment": "Dates and announcement notes for each Regulation. Legal Pokémon lists come from Showdown automatically; edit this file only to add dates/notes for a new Regulation.",
+  "regulations": [
+    {
+      "id": "M-A", "name": "Regulation Set M-A",
+      "effectiveDate": "2026-04-08T02:00:00Z", "endDate": "2026-06-17T01:59:00Z",
+      "source": "Serebii / Bulbapedia (dates)",
+      "note": "Showdown no longer keeps an M-A mod; legal list not available."
+    },
+    {
+      "id": "M-B", "name": "Regulation Set M-B",
+      "effectiveDate": "2026-06-17T02:00:00Z", "endDate": "2026-09-09T01:59:00Z",
+      "source": "Bulbapedia / pokemon-zone (dates)"
+    },
+    {
+      "id": "M-C", "name": "Regulation Set M-C",
+      "effectiveDate": "2026-09-09T02:00:00Z", "endDate": "2026-12-02T01:59:00Z",
+      "source": "pokemon-zone (dates)"
+    },
+    {
+      "id": "M-D", "name": "Regulation Set M-D",
+      "effectiveDate": "2026-12-02T02:00:00Z", "endDate": "2027-03-03T01:59:00Z",
+      "source": "Official announcement 2026-11-24 (PocketMonsters.net, Nintendo Life)",
+      "announced": {
+        "carriesOverFrom": "M-C (no Pokémon removed)",
+        "newPokemonCount": 24,
+        "newMegaCount": 4,
+        "namedSoFar": ["Heatran", "Mega Heatran", "Dondozo", "Tatsugiri", "Mega Tatsugiri"],
+        "balanceAdjustments": "Announced for 2026-12-02"
+      }
+    }
+  ]
+}

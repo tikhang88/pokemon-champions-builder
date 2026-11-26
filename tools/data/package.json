@@ -1,0 +1,7 @@
+{
+  "name": "champions-data-tools",
+  "private": true,
+  "type": "module",
+  "description": "Builds the offline data snapshot from Pokémon Showdown data files (parsed as text, never executed).",
+  "dependencies": { "typescript": "5.6.3" }
+}

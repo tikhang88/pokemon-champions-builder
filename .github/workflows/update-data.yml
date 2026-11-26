@@ -1,0 +1,77 @@
+name: Update data
+
+# Rebuilds the Champions data snapshot from Pokémon Showdown. Runs daily at 11:00 HKT and
+# on demand (Actions → Update data → Run workflow). When the Champions data changed it:
+#   1. publishes a "資料更新" release with champions_data.json (import it in the app), and
+#   2. commits the snapshot into the app and builds a new APK that ships with it.
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  data:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.cmp.outputs.changed }}
+      version: ${{ steps.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fetch Pokémon Showdown data
+        run: git clone --depth 1 https://github.com/smogon/pokemon-showdown.git "$RUNNER_TEMP/showdown"
+
+      - name: Build snapshot
+        id: build
+        working-directory: tools/data
+        run: |
+          npm ci --no-audit --no-fund
+          python3 build_snapshot.py --showdown "$RUNNER_TEMP/showdown" --out "$RUNNER_TEMP/champions_data.json"
+          echo "version=$(python3 -c "import json;print(json.load(open('$RUNNER_TEMP/champions_data.json'))['meta']['dataVersion'])")" >> "$GITHUB_OUTPUT"
+
+      - name: Compare with data in the app
+        id: cmp
+        run: python3 tools/data/compare.py app/src/main/assets/champions_data.json "$RUNNER_TEMP/champions_data.json" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Commit new data
+        if: steps.cmp.outputs.changed == 'true'
+        run: |
+          cp "$RUNNER_TEMP/champions_data.json" app/src/main/assets/champions_data.json
+          cp "$RUNNER_TEMP/champions_data.json" data/champions_data.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/champions_data.json data/champions_data.json
+          git commit -m "Data update ${{ steps.build.outputs.version }}"
+          git push
+
+      - name: Publish data release
+        if: steps.cmp.outputs.changed == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: data-${{ steps.build.outputs.version }}
+          name: 資料更新 ${{ steps.build.outputs.version }}
+          body: |
+            新的 Pokémon Champions 資料（來源：Pokémon Showdown）。
+            下載 champions_data.json，然後在 App「資料更新」→「選擇資料檔並匯入」。
+          files: ${{ runner.temp }}/champions_data.json
+          make_latest: false
+
+  apk:
+    needs: data
+    if: needs.data.outputs.changed == 'true'
+    uses: ./.github/workflows/build-apk.yml
+    with:
+      ref: main
+    secrets: inherit

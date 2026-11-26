@@ -1,0 +1,94 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      # Version = number of commits, so it always increases (push builds and data-update builds alike).
+      - name: Set version
+        run: |
+          n=$(git rev-list --count HEAD)
+          echo "APP_VERSION_CODE=$n" >> "$GITHUB_ENV"
+          echo "APP_VERSION_NAME=1.0.$n" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.11.1
+
+      - name: Prepare signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "SIGNING_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+            echo "SIGNING_STORE_PASSWORD=champions-builder" >> "$GITHUB_ENV"
+            echo "SIGNING_KEY_ALIAS=champions" >> "$GITHUB_ENV"
+            echo "SIGNING_KEY_PASSWORD=champions-builder" >> "$GITHUB_ENV"
+            echo "Signing with the release key."
+          else
+            echo "::warning::SIGNING_KEYSTORE_B64 secret not set: APK is signed with a temporary debug key. Updating will need an uninstall first."
+          fi
+
+      - name: Unit tests (engines + bundled data)
+        run: gradle :core:test --no-daemon
+
+      - name: Build APK
+        run: gradle :app:assembleRelease --no-daemon
+
+      - name: Rename APK
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/release/app-release.apk "out/PokemonChampions-v${APP_VERSION_NAME}.apk"
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PokemonChampions-v${{ env.APP_VERSION_NAME }}
+          path: out/*.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-v${{ env.APP_VERSION_NAME }}
+          target_commitish: ${{ inputs.ref || github.sha }}
+          fail_on_unmatched_files: true
+          name: App V${{ env.APP_VERSION_NAME }}
+          body: |
+            Pokémon Champions 隊伍研究 App V${{ env.APP_VERSION_NAME }}
+            下載下方的 APK，在 Android 手機安裝。
+          files: out/*.apk
+          make_latest: true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-reports
+          path: core/build/reports/tests/

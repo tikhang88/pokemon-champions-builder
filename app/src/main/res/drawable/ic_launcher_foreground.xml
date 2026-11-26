@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Original icon: a stylised trophy with a bar chart (no Pokémon artwork). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M38,32h32v10c0,9 -7,16 -16,16s-16,-7 -16,-16z" />
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M30,34h8v4h-4c0,4 2,7 5,8l-1,4c-5,-2 -8,-7 -8,-12zM78,34h-8v4h4c0,4 -2,7 -5,8l1,4c5,-2 8,-7 8,-12z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M51,58h6v8h-6z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M42,66h24v6h-24z" />
+    <path android:fillColor="#D7263D" android:pathData="M46,46h4v6h-4zM52,41h4v11h-4zM58,44h4v8h-4z" />
+</vector>

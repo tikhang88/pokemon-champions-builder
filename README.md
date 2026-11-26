@@ -2,9 +2,16 @@
 
 個人用 Android App，用於 Pokémon Champions 的競技資料查閱、隊伍構築及分析。完全離線可用。
 
-目前版本：**V1.3（Phase 4：Coverage Matrix・Speed Tier・Matchup Research）**
+目前版本：**V1.4（Phase 5：Damage Calculator）**
 
 ## 功能
+
+### V1.4 新增
+- **傷害計算**（主頁或隊伍頁）：基本模式（攻擊方、招式、防守方＋常用防守配置）及進階模式（Mega、特性、道具、性格、Stat Points、能力等級、狀態、HP、特性發動；場地：單／雙打、範圍招式、天氣、場地、反射壁／光牆／極光幕、幫助、友情防守、擊中要害、連續攻擊次數）。
+- 結果：傷害範圍及百分比、16 個隨機數、KO 機率（OHKO／2HKO…）、生存分析（要承受需要多少 HP／防禦 SP；要確定一擊擊倒需要多少攻擊 SP）。
+- 支援：本系、屬性相性（Freeze-Dry、Flying Press、Thousand Arrows、Scrappy）、-ate 特性、天氣、場地、擊中要害、灼傷、道具（講究系列、生命寶珠、達人帶、屬性強化道具、抗性樹果、突擊背心等）、常見特性（Huge Power、Technician、Multiscale、Filter、Thick Fat、Levitate 等）、特殊威力招式（Low Kick、Heavy Slam、Facade、Knock Off、Foul Play、Body Press 等）、多次攻擊、親子愛。
+- **驗證**：傷害公式通過 Smogon Damage Calculator 的第 9 世代測試案例（傷害範圍及 KO 機率完全一致），另有 Champions Lv50 測試；未支援的機制會標示 Estimated。
+- 圖鑑及選擇 Pokémon 加入「第二屬性」篩選；性格按提升的能力排列，無影響的放最後。
 
 ### V1.3 新增
 - **隊伍碼（Replica Team ID）**：每個隊伍可記錄 10 位隊伍碼，可複製。隊伍碼由遊戲伺服器解讀、本身不含隊伍資料，所以 App 不能用隊伍碼直接讀取隊伍。
@@ -91,8 +98,8 @@ data/          最新資料快照
 | 2 | Team Builder、合法性檢查 | ✅ V1.1 |
 | 3 | Team Analysis | ✅ V1.2 |
 | 4 | Coverage Matrix、Speed Tier、Matchup | ✅ V1.3 |
-| 5 | Damage Calculator | 下一步 |
-| 6 | Battle Simulator | |
+| 5 | Damage Calculator | ✅ V1.4 |
+| 6 | Battle Simulator | 下一步 |
 | 7–8 | 完整離線整合、測試及發佈 | |
 
 Pokémon 及相關名稱為 Nintendo、Creatures、GAME FREAK、The Pokémon Company 的商標。本 App 為非官方個人工具，不包含官方圖像。

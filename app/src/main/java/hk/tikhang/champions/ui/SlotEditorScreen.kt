@@ -130,7 +130,7 @@ fun SlotEditorScreen(vm: AppViewModel, state: DataState, teamId: Long, index: In
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("性格", Modifier.width(96.dp))
-                        Picker(natureLabel(s, slot.nature), s.natures.map { it.id }, { natureLabel(s, it) }) { n -> update { it.copy(nature = n) } }
+                        Picker(natureLabel(s, slot.nature), sortedNatureIds(s), { natureLabel(s, it) }) { n -> update { it.copy(nature = n) } }
                     }
                 }
             }
@@ -162,7 +162,17 @@ fun SlotEditorScreen(vm: AppViewModel, state: DataState, teamId: Long, index: In
     }
 }
 
-private fun natureLabel(s: hk.tikhang.champions.core.Snapshot, id: String): String {
+/** Natures grouped by the stat they raise (攻擊, 防禦, 特攻, 特防, 速度); neutral natures last. */
+fun sortedNatureIds(s: hk.tikhang.champions.core.Snapshot): List<String> {
+    val order = Stat.entries.map { it.key }
+    return s.natures.sortedWith(compareBy(
+        { n -> if (n.plus == null || n.plus == n.minus) 99 else order.indexOf(n.plus) },
+        { n -> if (n.minus == null) 99 else order.indexOf(n.minus) },
+        { n -> NatureZh[n.id] ?: n.name },
+    )).map { it.id }
+}
+
+fun natureLabel(s: hk.tikhang.champions.core.Snapshot, id: String): String {
     val n = s.natures.firstOrNull { it.id == id } ?: return id
     val zh = NatureZh[id] ?: n.name
     if (n.plus == null || n.plus == n.minus) return "$zh（無影響）"
@@ -171,7 +181,7 @@ private fun natureLabel(s: hk.tikhang.champions.core.Snapshot, id: String): Stri
 }
 
 @Composable
-private fun SpEditor(state: DataState, slot: TeamSlot, set: (Stat, Int) -> Unit) {
+fun SpEditor(state: DataState, slot: TeamSlot, set: (Stat, Int) -> Unit) {
     val s = state.snapshot
     val stats = TeamEngine.finalStats(s, slot)
     val remaining = StatsEngine.MAX_SP_TOTAL - slot.spTotal
@@ -209,7 +219,7 @@ private fun SmallButton(label: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun MoveSummary(m: Move) {
+fun MoveSummary(m: Move) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)) {
         TypeChip(m.type)
         Text(
@@ -236,7 +246,7 @@ private fun SearchDialog(title: String, onDismiss: () -> Unit, content: @Composa
 }
 
 @Composable
-private fun ItemPickerDialog(state: DataState, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
+fun ItemPickerDialog(state: DataState, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
     val s = state.snapshot
     SearchDialog("選擇道具", onDismiss) { q ->
         val list = remember(q) {
@@ -256,7 +266,7 @@ private fun ItemPickerDialog(state: DataState, onPick: (String?) -> Unit, onDism
 }
 
 @Composable
-private fun MovePickerDialog(state: DataState, speciesId: String, exclude: Set<String>, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+fun MovePickerDialog(state: DataState, speciesId: String, exclude: Set<String>, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     val s = state.snapshot
     val p = s.pokemonById[speciesId]
     val learnset = (s.learnsets[speciesId] ?: s.learnsets[p?.baseId ?: ""]).orEmpty()

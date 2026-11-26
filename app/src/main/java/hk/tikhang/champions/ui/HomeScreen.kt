@@ -100,13 +100,13 @@ fun HomeScreen(vm: AppViewModel, state: DataState, navigate: (String) -> Unit) {
             }
             item { MenuItem("Team Builder", "建立／匯入隊伍、隊伍碼、合法性檢查、隊伍分析、Speed Tier、Matchup 研究") { navigate(Routes.TEAMS) } }
             item { MenuItem("Pokémon 圖鑑", "搜尋、篩選、能力值、招式、Mega 比較") { navigate(Routes.POKEDEX) } }
+            item { MenuItem("傷害計算", "Champions 傷害計算器：傷害範圍、KO 機率、生存分析（基本／進階）") { navigate(Routes.calc(0)) } }
             item { MenuItem("Speed Tier 研究", "目前 Regulation 所有 Pokémon 的速度排位、條件（順風・戲法空間・圍巾等）") { navigate(Routes.speed(0)) } }
             item { MenuItem("Regulation", "目前及歷史規則、可用 Pokémon、切換 Regulation") { navigate(Routes.REGULATIONS) } }
             item { MenuItem("資料更新", "匯入新資料（例如 12 月 2 日的 M-D）、還原、更新紀錄") { navigate(Routes.DATA) } }
             item {
                 SectionCard("之後的版本") {
                     listOf(
-                        "Damage Calculator" to "Phase 5",
                         "Battle Simulator" to "Phase 6",
                     ).forEach { (name, phase) ->
                         Row(Modifier.fillMaxWidth()) {

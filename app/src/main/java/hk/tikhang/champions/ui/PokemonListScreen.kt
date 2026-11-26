@@ -55,6 +55,7 @@ fun PokemonListScreen(
     val s = state.snapshot
     var query by rememberSaveable { mutableStateOf("") }
     var type by rememberSaveable { mutableStateOf<String?>(null) }
+    var type2 by rememberSaveable { mutableStateOf<String?>(null) }
     var sort by rememberSaveable { mutableStateOf(SortBy.DEX) }
     var showMega by rememberSaveable { mutableStateOf(!pickMode) }
     var megaOnly by rememberSaveable { mutableStateOf(false) }
@@ -65,12 +66,12 @@ fun PokemonListScreen(
         s.pokemon.filter { it.teamSelectable && (allowed == null || it.id in allowed) }
     }
     val q = query.trim()
-    val list = remember(pool, q, type, sort, showMega, megaOnly) {
+    val list = remember(pool, q, type, type2, sort, showMega, megaOnly) {
         val qid = toId(q)
         pool.asSequence()
             .filter { if (megaOnly) it.isMega else showMega || !it.isMega }
             .filter { !pickMode || !it.isMega }
-            .filter { type == null || type in it.types }
+            .filter { (type == null || type in it.types) && (type2 == null || type2 in it.types) }
             .filter { p ->
                 q.isEmpty() || s.displayName(p).contains(q) || toId(p.name).contains(qid) ||
                     q.toIntOrNull() == p.num ||
@@ -88,7 +89,8 @@ fun PokemonListScreen(
                     label = { Text("搜尋名稱、編號或特性") }, modifier = Modifier.fillMaxWidth(),
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Picker(type?.let { TypeZh[it] } ?: "全部屬性", listOf<String?>(null) + s.types, { it?.let { t -> TypeZh[t] } ?: "全部屬性" }) { type = it }
+                    Picker("屬性：" + (type?.let { TypeZh[it] } ?: "全部"), listOf<String?>(null) + s.types, { it?.let { t -> TypeZh[t] } ?: "全部屬性" }) { type = it }
+                    Picker("第二屬性：" + (type2?.let { TypeZh[it] } ?: "全部"), listOf<String?>(null) + s.types, { it?.let { t -> TypeZh[t] } ?: "全部屬性" }) { type2 = it }
                     Picker("排序：${sort.zh}", SortBy.entries.toList(), { it.zh }) { sort = it }
                     if (!pickMode) {
                         FilterChip(selected = showMega && !megaOnly, onClick = { showMega = !showMega; megaOnly = false }, label = { Text("包括 Mega") })

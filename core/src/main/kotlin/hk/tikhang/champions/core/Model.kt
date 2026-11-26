@@ -231,6 +231,12 @@ data class Move(
     val priority: Int = 0,
     val target: String? = null,
     val flags: List<String> = emptyList(),
+    val critRatio: Int = 1,
+    /** A number of hits, or [min, max]. */
+    val multihit: JsonElement? = null,
+    val secondary: JsonElement? = null,
+    val recoil: JsonElement? = null,
+    val drain: JsonElement? = null,
     val shortDesc: String? = null,
     val shortDescZh: String? = null,
     val championsChanged: Boolean = false,

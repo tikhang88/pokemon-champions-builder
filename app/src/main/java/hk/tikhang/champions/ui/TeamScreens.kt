@@ -168,7 +168,7 @@ fun shareText(context: android.content.Context, title: String, text: String) {
 fun TeamEditorScreen(
     vm: AppViewModel, state: DataState, teamId: Long, onBack: () -> Unit,
     pickPokemon: (slot: Int) -> Unit, editSlot: (slot: Int) -> Unit, analyse: () -> Unit,
-    speedTier: () -> Unit = {}, matchup: () -> Unit = {},
+    speedTier: () -> Unit = {}, matchup: () -> Unit = {}, damage: () -> Unit = {},
 ) {
     val teams by vm.teams.collectAsStateWithLifecycle()
     val entity = teams.firstOrNull { it.id == teamId }
@@ -213,6 +213,7 @@ fun TeamEditorScreen(
                     OutlinedButton(onClick = speedTier, Modifier.weight(1f), enabled = team.members.isNotEmpty()) { Text("Speed Tier") }
                     if (!team.opponent) OutlinedButton(onClick = matchup, Modifier.weight(1f), enabled = team.members.isNotEmpty()) { Text("Matchup 研究") }
                 }
+                OutlinedButton(onClick = damage, Modifier.fillMaxWidth().padding(top = 8.dp), enabled = team.members.isNotEmpty()) { Text("傷害計算") }
             }
             }
             items(TEAM_SIZE) { i ->

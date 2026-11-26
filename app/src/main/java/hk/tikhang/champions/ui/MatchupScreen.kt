@@ -153,7 +153,7 @@ private fun PairingTable(res: MatchupEngine.OpponentResult) {
                 Text("%.1f".format(p.score), Modifier.weight(0.6f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
-        Text("分數 = 我方攻擊（log₂倍率）＋ 防守（−log₂對手倍率）＋ 速度（±0.5）。傷害範圍將於 Phase 5 Damage Calculator 加入。",
+        Text("分數 = 我方攻擊（log₂倍率）＋ 防守（−log₂對手倍率）＋ 速度（±0.5）。實際傷害範圍可用「傷害計算」查看。",
             fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -179,7 +179,7 @@ private fun MatchupReport(r: MatchupEngine.Report) {
         if (r.opponentSharedWeakness.isEmpty()) Text("沒有", style = MaterialTheme.typography.bodySmall)
         r.opponentSharedWeakness.forEach { Text("・$it", style = MaterialTheme.typography.bodySmall) }
         Text("傷害考慮", style = MaterialTheme.typography.titleSmall)
-        Text("未計算實際傷害：Damage Calculator 會在 Phase 5 加入。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Matchup 評級未計實際傷害數字；可在隊伍頁的「傷害計算」查看具體傷害範圍及 KO 機率。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text("可能策略（分析建議）", style = MaterialTheme.typography.titleSmall)
         r.strategy.forEach { Text("・$it", style = MaterialTheme.typography.bodySmall) }
         if (r.leadSuggestion.size == 2) Text("・按分數估算的先發組合（雙打）：${r.leadSuggestion.joinToString(" ＋ ") { it.name }}", style = MaterialTheme.typography.bodySmall)
